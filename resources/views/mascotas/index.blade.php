@@ -1,0 +1,76 @@
+@extends('layouts.app')
+
+@section('content')
+    <div class="max-w-5xl mx-auto px-4">
+        <h2 class="text-2xl font-bold mb-6 text-center">Mis mascotas</h2>
+
+        <!-- botón para añadir nueva mascota -->
+        <a href="{{ route('mascotas.create') }}" class="bg-green-600 text-black px-4 py-2 rounded mb-4 inline-block">
+            Añadir mascota
+        </a>
+
+        <!-- contenedor de mensajes AJAX -->
+        <div id="mensaje-ajax" class="hidden p-3 mb-4 rounded text-center font-semibold"></div>
+
+        @if($mascotas->isEmpty())
+            <p class="text-gray-700">No tienes mascotas registradas actualmente.</p>
+        @else
+            <ul class="space-y-2">
+                @foreach ($mascotas as $mascota)
+                    <li class="bg-white shadow p-4 rounded flex justify-between items-center">
+
+                        @if($mascota->foto)
+                            <img src="{{ asset('storage/' . $mascota->foto) }}" class="w-16 h-16 object-cover rounded border">
+                        @else
+                            <div class="w-16 h-16 bg-gray-200 flex items-center justify-center rounded text-gray-500">
+                                🐾 <!-- no hay foto --> 
+                            </div>
+                        @endif
+
+                        <div>
+                            <strong>{{ $mascota->nombre }}</strong> ({{ $mascota->especie }})
+                        </div>
+
+                        <div class="space-x-2">
+                            <a href="{{ route('mascotas.show', $mascota) }}"
+                                class="bg-blue-600 text-black px-3 py-1 rounded hover:bg-blue-700">
+                                Ver
+                            </a>
+
+                            <a href="{{ route('mascotas.edit', $mascota) }}"
+                                class="bg-green-600 text-black px-3 py-1 rounded hover:bg-green-700">
+                                Editar
+                            </a>
+
+                            <button type="button" class="btn-eliminar-mascota bg-red-600 text-white px-3 py-1 rounded"
+                                data-id="{{ $mascota->id }}" data-nombre="{{ $mascota->nombre }}">
+                                Borrar
+                            </button>
+                        </div>
+
+                        <span class="{{ $mascota->aprobado ? 'text-green-600' : 'text-yellow-600' }}">
+                            {{ $mascota->aprobado ? 'Mascota aprobada.' : 'Mascota pendiente de aprobar.' }}
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+    </div>
+
+    <!-- MODAL GLOBAL -->
+    <div id="modal-confirmacion" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-80">
+            <h3 id="modal-titulo" class="text-lg font-bold mb-4">Confirmar acción</h3>
+            <p id="modal-texto" class="mb-6"></p>
+
+            <div class="flex justify-end gap-2">
+                <button id="modal-cancelar" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
+                    Cancelar
+                </button>
+                <button id="modal-confirmar" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+@endsection
