@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Mascota;
+use App\Models\Estancia;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -53,5 +53,17 @@ class User extends Authenticatable
     public function mascotas()
     {
         return $this->hasMany(Mascota::class, 'dueno_id');
+    }
+
+    //un usuario puede tener muchas estancias a traves de sus mascotas
+    //primero se obtienen las mascotas del usuario y luego las estancias de esas mascotas
+    public function estancias()
+    {
+        return $this->hasManyThrough(
+            Estancia::class,
+            Mascota::class,
+            'dueno_id', //clave foranea en mascotas que apunta al usuario
+            'mascota_id' //clave foranea en estancias que apunta a la mascota
+        );
     }
 }
