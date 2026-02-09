@@ -53,10 +53,16 @@ class Estancia extends Model
         $entrada = new \DateTime($this->fecha_entrada);
         $salida = new \DateTime($this->fecha_salida);
 
+        //si la salida es igual o anterior a la entrada, la estancia es invalida y el precio total se pone a 0
+        if ($salida <= $entrada) {
+            $this->precio_total = 0;
+            return 0;
+        }
+
         //calcular diferencia de dias entre enrrada y salida
         //la fecha de salida NO cuenta como dia estancia
         $dias = $entrada->diff($salida)->days;
-        
+
         //el precio total es el precio por dia multiplicado por los dias reales de estancia
         $this->precio_total = round($this->precio_dia * $dias, 2);
 
@@ -77,16 +83,27 @@ class Estancia extends Model
         $entrada = new \DateTime($entrada);
         $salida = new \DateTime($salida);
 
+        //para saber que salida es posterior a entrada
+        if ($salida <= $entrada) {
+            return false;
+        }
+
         //recorrer cada dia del rango solicitado (desde fecha_entrada hasta el día ANTERIOR a fecha_salida)
+        //importante! clone evita que al modificar la fecha del bucle se modifique tambien la fecha original
         $fecha = clone $entrada;
 
         while ($fecha < $salida) {
 
-            //contamos cuantas estancias hay ese dia concreto
-            $ocupadas = self::whereIn('estado', ['confirmada', 'activa'])
-                ->when($ignorarEstanciaId, function ($query) use ($ignorarEstanciaId) {
-                    $query->where('id', '!=', $ignorarEstanciaId);
-                })
+            //solo cuentan las reservas que esten confirmadas y activas, no canceladas o pendientes
+            $query = self::estanciasActivas();
+
+            //si se esta editando una estancia existente (ej: ampliando fechas), ignorar esa misma estancia para no contarla dos veces y sea erroneo
+            //!== para que no de fallos
+            if ($ignorarEstanciaId !== null) {
+                $query->where('id', '!=', $ignorarEstanciaId);
+            }
+
+            $ocupadas = $query
                 ->where('fecha_entrada', '<=', $fecha->format('Y-m-d'))
                 ->where('fecha_salida', '>', $fecha->format('Y-m-d'))
                 ->count();
@@ -109,9 +126,9 @@ class Estancia extends Model
     //si es posterior, se comprueba disponibilidad
     public function puedeAmpliarse($nuevaSalida)
     {
-        //convertir a fechas
-        $salidaActual = strtotime($this->fecha_salida);
-        $nuevaSalida = strtotime($nuevaSalida);
+        //convertir las fechas para comparar
+        $salidaActual = new \DateTime($this->fecha_salida);
+        $nuevaSalida = new \DateTime($nuevaSalida);
 
         //acortar estancia siempre es posible
         if ($nuevaSalida <= $salidaActual) {
@@ -120,8 +137,8 @@ class Estancia extends Model
 
         //comprobar disponibilidad solo en los dias extra
         return self::hayDisponibilidad(
-            $this->fecha_salida,
-            date('Y-m-d', $nuevaSalida),
+            $salidaActual->format('Y-m-d'),
+            $nuevaSalida->format('Y-m-d'),
             20,
             $this->id
         );
@@ -130,6 +147,15 @@ class Estancia extends Model
     //confirma la estancia (si hay disponibilidad)
     public function confirmar()
     {
+
+        $entrada = new \DateTime($this->fecha_entrada);
+        $salida = new \DateTime($this->fecha_salida);
+
+        //para saber que salida es posterior a entrada
+        if ($salida <= $entrada) {
+            return false;
+        }
+
         if (!self::hayDisponibilidad($this->fecha_entrada, $this->fecha_salida)) {
             return false;
         }
@@ -143,7 +169,7 @@ class Estancia extends Model
     //inicia la estancia (el perro entra en la residencia)
     public function iniciar()
     {
-        if ($this->estado !== 'confirmada') {
+        if ($this->estado != 'confirmada') {
             return false;
         }
 
