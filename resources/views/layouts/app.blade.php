@@ -25,6 +25,26 @@
 
 <body class="bg-gray-100 font-sans min-h-screen">
 
+    <!-- MODAL GLOBAL (para acciones), asi no hay que ponerlo en cada archivo -->
+    <div id="modal-confirmacion"
+        class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-80">
+            <h3 id="modal-titulo" class="text-lg font-bold mb-4"></h3>
+            <p id="modal-texto" class="mb-6"></p>
+
+            <div class="flex justify-end gap-2">
+                <button id="modal-cancelar" type="button" class="px-4 py-2 bg-red-600 rounded hover:bg-red-300">
+                    Cancelar
+                </button>
+
+                <button id="modal-confirmar" type="button"
+                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-300">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- cabecera comun -->
     <header class="bg-white shadow p-4 mb-6">
         <h1 class="text-xl font-bold">Residencia animal Huellas Felices</h1>
