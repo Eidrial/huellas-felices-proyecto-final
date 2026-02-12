@@ -47,8 +47,8 @@ class AdminController extends Controller
         //manejar subida de imagen si hay archivo
         if ($request->hasFile('foto')) {
             //eliminar foto anterior si existe
-            if ($mascota->foto && \Storage::exists($mascota->foto)) {
-                \Storage::delete($mascota->foto);
+            if ($mascota->foto && \Storage::disk('public')->exists($mascota->foto)) {
+                \Storage::disk('public')->delete($mascota->foto);
             }
 
             //guardar nueva foto en storage/app/public/mascotas
@@ -97,6 +97,11 @@ class AdminController extends Controller
     //eliminar una mascota (con ajax)
     public function eliminarMascota(Mascota $mascota)
     {
+        //borrar la foto del storage si existe (disk public)
+        if ($mascota->foto && \Storage::disk('public')->exists($mascota->foto)) {
+            \Storage::disk('public')->delete($mascota->foto);
+        }
+
         $mascota->delete();
 
         if (request()->ajax()) {
