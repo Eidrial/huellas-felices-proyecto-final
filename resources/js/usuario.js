@@ -21,4 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    //CANCELAR ESTANCIA DESDE USUARIO
+    document.querySelectorAll('.btn-cancelar-estancia').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const estanciaId = this.dataset.id;
+            const mensaje = this.dataset.msg || '¿Seguro que quieres cancelar esta estancia?';
+
+            window.abrirModal(
+                'Cancelar estancia',
+                mensaje,
+                () => {
+                    const form = document.getElementById(`form-cancelar-${estanciaId}`);
+                    if (form) form.submit();
+                }
+            );
+        });
+    });
+
 });

@@ -4,10 +4,6 @@
     <div class="max-w-6xl mx-auto px-4">
         <h2 class="text-2xl font-bold mb-4 text-center">Gestión de usuarios</h2>
 
-        <!-- caja de mensaje -->
-        <div id="mensaje-ajax" class="hidden p-3 mb-4 rounded text-center font-semibold">
-        </div>
-
         <!-- tabla única de todos los usuarios -->
         <table class="w-full bg-white shadow rounded text-center mb-4">
             <thead class="bg-gray-200">

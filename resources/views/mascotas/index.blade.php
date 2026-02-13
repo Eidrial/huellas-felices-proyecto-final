@@ -9,9 +9,6 @@
             Añadir mascota
         </a>
 
-        <!-- contenedor de mensajes AJAX -->
-        <div id="mensaje-ajax" class="hidden p-3 mb-4 rounded text-center font-semibold"></div>
-
         @if($mascotas->isEmpty())
             <p class="text-gray-700">No tienes mascotas registradas actualmente.</p>
         @else

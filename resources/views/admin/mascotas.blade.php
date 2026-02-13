@@ -4,9 +4,6 @@
     <div class="max-w-5xl mx-auto px-4">
         <h2 class="text-2xl font-bold mb-6 text-center">Gestión de mascotas</h2>
 
-        <!-- contenedor para mensajes -->
-        <div id="mensaje-ajax" class="hidden p-3 mb-4 rounded text-center font-semibold"></div>
-
         <div class="overflow-x-auto">
             <table class="w-full bg-white shadow rounded overflow-hidden text-center">
                 <thead class="bg-gray-200">

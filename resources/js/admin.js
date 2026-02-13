@@ -111,6 +111,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-        
     });
+
+    //CANCELAR ESTANCIA DESDE ADMIN
+    document.querySelectorAll('.btn-cancelar-estancia-admin').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const estanciaId = this.dataset.id;
+            const msg = this.dataset.msg || '¿Seguro que quieres cancelar esta estancia?';
+
+            window.abrirModal(
+                'Cancelar estancia',
+                msg,
+                () => {
+                    const form = document.getElementById(`form-cancelar-estancia-${estanciaId}`);
+                    //saber que existe el form
+                    if (form) {
+                        form.submit();
+                    }
+                }
+            );
+        });
+    });
+
+    //CONFIRMAR ESTANCIA DESDE ADMIN (con modal)
+    document.querySelectorAll('.btn-confirmar-estancia-admin').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const estanciaId = this.dataset.id;
+            const msg = this.dataset.msg;
+
+            window.abrirModal(
+                'Confirmar estancia',
+                msg,
+                () => {
+                    const form = document.getElementById(`form-confirmar-estancia-${estanciaId}`);
+                    if (form) form.submit();
+                }
+            );
+        });
+    });
+
 });

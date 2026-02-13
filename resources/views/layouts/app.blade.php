@@ -70,6 +70,9 @@
             </div>
         @endif
 
+        <!-- MENSAJE AJAX GLOBAL -->
+        <div id="mensaje-ajax" class="hidden p-3 mb-4 rounded text-center font-semibold"></div>
+
         <!-- seccion donde se cargará el contenido especifico de cada vista -->
         @yield('content')
     </main>
