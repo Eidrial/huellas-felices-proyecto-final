@@ -10,7 +10,7 @@ class EstanciaAdminController extends Controller
     //listado de todas las estancias
     public function index()
     {
-        $estancias = Estancia::with('mascota.dueno')->get();
+        $estancias = Estancia::with('mascota.dueno')->orderBy('fecha_entrada', 'desc')->get();
         return view('admin.estancias', compact('estancias'));
     }
 
@@ -18,17 +18,17 @@ class EstanciaAdminController extends Controller
     public function confirmar(Estancia $estancia)
     {
         //cargar mascota por si no esta cargada
-        $estancia->load('mascota');
+        $mascota = $estancia->mascota;
 
         //comprobar que la estancia tiene mascota asociada
-        if (!$estancia->mascota) {
+        if (!$mascota) {
             return back()->with('error', 'Esta estancia no tiene mascota asociada.');
         }
 
         //si la mascota esta pendiente, aprobarla automaticamente
-        if ($estancia->mascota->aprobado === null) {
-            $estancia->mascota->aprobado = 1;
-            $estancia->mascota->save();
+        if ($mascota->aprobado === null) {
+            $mascota->aprobado = 1;
+            $mascota->save();
         }
 
         //confirmar estancia

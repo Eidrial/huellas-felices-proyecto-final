@@ -76,10 +76,14 @@ class Estancia extends Model
     }
 
     //comprueba si hay disponibilidad para una estancia entre dos fechas
-    //la residencia alojara 20 perros como max a la vez
+    //la residencia alojara 20 perros como max a la vez (segun config)
     //fecha de salida NO ocupa plaza
-    public static function hayDisponibilidad($entrada, $salida, $maxPerros = 20, $ignorarEstanciaId = null)
+    public static function hayDisponibilidad($entrada, $salida, $ignorarEstanciaId = null)
     {
+
+        //obtener maximo de perros desde config
+        $maxPerros = config('residencia.max_perros');
+
         $entrada = new \DateTime($entrada);
         $salida = new \DateTime($salida);
 
@@ -139,7 +143,6 @@ class Estancia extends Model
         return self::hayDisponibilidad(
             $salidaActual->format('Y-m-d'),
             $nuevaSalida->format('Y-m-d'),
-            20,
             $this->id
         );
     }

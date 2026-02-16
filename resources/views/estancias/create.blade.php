@@ -15,9 +15,17 @@
         @endif
 
         <div class="bg-blue-50 text-blue-800 p-3 rounded mb-4">
-            <p><strong>Precio por día:</strong> {{ number_format(config('residencia.precio_dia'), 2) }} €</p>
+            <p><strong>Precio por día:</strong> {{ number_format(config('residencia.precio_dia'), 2) }} € (no incluye cuidados extra)</p>
             <p class="text-sm">Se paga el primer día al entregar el perro.</p>
             <p class="text-sm">Las reservas deben hacerse con al menos 1 día de antelación.</p>
+
+            <p class="text-sm">
+                Máximo {{ config('residencia.max_dias_estancia') }} días por estancia.
+            </p>
+            <p class="text-sm">
+                Máximo {{ config('residencia.max_estancias_por_mascota') }} reservas pendientes por mascota.
+                Las estancias no pueden coincidir entre sí.
+            </p>
         </div>
 
         <form method="POST" action="{{ route('estancias.store') }}" class="bg-white shadow p-6 rounded">
@@ -28,10 +36,10 @@
                 <select name="mascota_id" class="w-full border rounded p-2" required>
                     <option value="" selected disabled>Selecciona una mascota</option>
                     @foreach($mascotas as $mascota)
-                        <option value="{{ $mascota->id }}" @selected(old('mascota_id') == $mascota->id) @if($mascota->aprobado == 0)
+                        <option value="{{ $mascota->id }}" @selected(old('mascota_id') == $mascota->id) @if($mascota->aprobado === 0)
                         disabled @endif>
                             {{ $mascota->nombre }}
-                            ({{ $mascota->aprobado == 1 ? 'Aprobada' : ($mascota->aprobado === null ? 'Pendiente' : 'No aprobada') }})
+                            ({{ $mascota->aprobado === 1 ? 'Aprobada' : ($mascota->aprobado === null ? 'Pendiente' : 'No aprobada') }})
                         </option>
                     @endforeach
                 </select>

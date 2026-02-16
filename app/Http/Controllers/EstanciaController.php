@@ -12,7 +12,7 @@ class EstanciaController extends Controller
     //listado de estancias del usuario logueado
     public function index()
     {
-        $estancias = Auth::user()->estancias()->with('mascota')->get();
+        $estancias = Auth::user()->estancias()->with('mascota')->orderBy('fecha_entrada', 'desc')->get();
         return view('estancias.index', compact('estancias'));
     }
 
@@ -44,9 +44,43 @@ class EstanciaController extends Controller
             return back()->with('error', 'No puedes reservar para una mascota que no es tuya.');
         }
 
+        //limite de estancias por mascota
+        $maxPendientes = config('residencia.max_estancias_por_mascota');
+
+        //solo contaran para el maximo las pendientes y las confirmadas, las activas no
+        $abiertas = Estancia::where('mascota_id', $mascota->id)->whereIn('estado', ['pendiente', 'confirmada'])->count();
+
+        if ($abiertas >= $maxPendientes) {
+            return back()->with('error', 'Esta mascota ya tiene el máximo de estancias pendientes/confirmadas.');
+        }
+
         //validar T+1
         if (!Estancia::fechaValida($request->fecha_entrada)) {
             return back()->with('error', 'La fecha de entrada debe ser al menos mañana.');
+        }
+
+        $entrada = new \DateTime($request->fecha_entrada);
+        $salida = new \DateTime($request->fecha_salida);
+        $dias = $entrada->diff($salida)->days;
+
+        if ($dias > config('residencia.max_dias_estancia')) {
+            return back()->with('error', 'La estancia no puede superar los ' . config('residencia.max_dias_estancia') . ' días.');
+        }
+
+        //comprobar si coincide con otra estancia de la misma mascota
+        $otrasEstancias = Estancia::where('mascota_id', $mascota->id)->whereIn('estado', ['pendiente', 'confirmada', 'activa'])->get();
+
+        $hayConflicto = false;
+
+        foreach ($otrasEstancias as $e) {
+            $hayConflicto = $hayConflicto || (
+                $request->fecha_entrada < $e->fecha_salida &&
+                $request->fecha_salida > $e->fecha_entrada
+            );
+        }
+
+        if ($hayConflicto) {
+            return back()->with('error', 'Esta mascota ya tiene otra estancia entre estas fechas.');
         }
 
         //estado por defecto
