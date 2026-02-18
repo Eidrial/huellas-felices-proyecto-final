@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Mascota;
+use App\Models\Estancia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -131,9 +132,36 @@ class MascotaController extends Controller
     {
         if ($mascota->dueno_id != Auth::id()) {
             if (request()->ajax()) {
-                return response()->json(['success' => false, 'message' => 'No puedes borrar esta mascota.'], 403);
+                return response()->json(['success' => false, 'message' => 'No puedes borrar esta mascota.']);
             }
             return redirect()->route('mascotas.index')->with('error', 'No puedes borrar esta mascota.');
+        }
+
+        //no permitir borrar mascotas durante x estancias
+        //mensaje específico segun el estado de la estancia
+        //orderByRaw hace que primero se busquen las estancias activas,
+        //luego las confirmadas y por ultimo las pendientes (por orden de importancia)
+        $existeEstancia = Estancia::where('mascota_id', $mascota->id)->whereIn('estado', ['pendiente', 'confirmada', 'activa'])->orderByRaw("FIELD(estado, 'activa', 'confirmada', 'pendiente')")->first();
+
+        if ($existeEstancia) {
+            if ($existeEstancia->estado == 'pendiente') {
+                $msg = 'No puedes borrar esta mascota porque tiene una estancia pendiente. Cancela la estancia antes de borrarla.';
+            } elseif ($existeEstancia->estado == 'confirmada') {
+                $msg = 'No puedes borrar esta mascota porque tiene una estancia confirmada. Cancela la estancia antes de borrarla.';
+            } else { //activa
+                $msg = 'No puedes borrar esta mascota porque tiene una estancia activa. Espera a que finalice la estancia para poder borrarla.';
+            }
+
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg]);
+            }
+
+            return redirect()->route('mascotas.index')->with('error', $msg);
+        }
+
+        //borrar foto del storage sie xiste
+        if ($mascota->foto && \Storage::disk('public')->exists($mascota->foto)) {
+            \Storage::disk('public')->delete($mascota->foto);
         }
 
         $mascota->delete();

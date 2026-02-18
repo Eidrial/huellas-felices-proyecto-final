@@ -18,7 +18,15 @@
       <p><strong>Raza:</strong> {{ $mascota->raza }}</p>
       <p><strong>Edad:</strong> {{ $mascota->edad }} años</p>
       <p><strong>Peso:</strong> {{ $mascota->peso }} kg</p>
-      <p><strong>Estado:</strong> {{ $mascota->aprobado ? 'Aprobada' : 'Pendiente' }}</p>
+      <p><strong>Estado:</strong>
+         @if($mascota->aprobado === 1)
+            Aprobada
+         @elseif($mascota->aprobado === 0)
+            No aprobada
+         @else
+            Pendiente
+         @endif
+      </p>
 
       <a href="{{ route('mascotas.edit', $mascota) }}"
          class="mt-4 inline-block bg-blue-600 text-blacke px-4 py-2 rounded hover:bg-blue-700">

@@ -9,7 +9,6 @@
                 <thead class="bg-gray-200">
                     <tr>
                         <th class="p-3">Foto</th>
-                        </th>
                         <th class="p-3">Nombre</th>
                         <th class="p-3">Especie</th>
                         <th class="p-3">Dueño</th>
@@ -46,7 +45,7 @@
                                         class="w-16 h-16 object-cover rounded mx-auto">
                                 @else
                                     <div class="w-16 h-16 bg-gray-200 flex items-center justify-center rounded text-gray-500">
-                                        🐾 <!-- no hay foto --> 
+                                        🐾 <!-- no hay foto -->
                                     </div>
                                 @endif
                             </td>
@@ -88,7 +87,7 @@
                                 </a>
 
                                 <!-- eliminar -->
-                                <button type="button" class="btn-eliminar-mascota bg-red-600 text-white px-2 py-1 rounded"
+                                <button type="button" class="btn-eliminar-mascota-admin bg-red-600 text-white px-2 py-1 rounded"
                                     data-id="{{ $mascota->id }}" data-nombre="{{ $mascota->nombre }}">
                                     eliminar
                                 </button>

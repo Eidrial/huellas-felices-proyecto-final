@@ -20,7 +20,7 @@
                             <img src="{{ asset('storage/' . $mascota->foto) }}" class="w-16 h-16 object-cover rounded border">
                         @else
                             <div class="w-16 h-16 bg-gray-200 flex items-center justify-center rounded text-gray-500">
-                                🐾 <!-- no hay foto --> 
+                                🐾 <!-- no hay foto -->
                             </div>
                         @endif
 
@@ -45,8 +45,22 @@
                             </button>
                         </div>
 
-                        <span class="{{ $mascota->aprobado ? 'text-green-600' : 'text-yellow-600' }}">
-                            {{ $mascota->aprobado ? 'Mascota aprobada.' : 'Mascota pendiente de aprobar.' }}
+                        <!-- distinguir aprobada / no aprobada / pendiente -->
+                        @php
+                            if ($mascota->aprobado === 1) {
+                                $estadoTexto = 'Mascota aprobada.';
+                                $estadoColor = 'text-green-600';
+                            } elseif ($mascota->aprobado === 0) {
+                                $estadoTexto = 'Mascota NO aprobada.';
+                                $estadoColor = 'text-red-600';
+                            } else {
+                                $estadoTexto = 'Mascota pendiente de aprobar.';
+                                $estadoColor = 'text-yellow-600';
+                            }
+                        @endphp
+
+                        <span class="{{ $estadoColor }}">
+                            {{ $estadoTexto }}
                         </span>
                     </li>
                 @endforeach

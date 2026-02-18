@@ -58,14 +58,14 @@
 
         <!-- mensajes globales de error -->
         @if(session('error'))
-            <div class="bg-red-100 text-red-700 p-3 mb-4 rounded text-center">
+            <div class="mensaje-sesion bg-red-100 text-red-700 p-3 mb-4 rounded text-center">
                 {{ session('error') }}
             </div>
         @endif
 
         <!-- mensajes globales de exito -->
         @if(session('success'))
-            <div class="bg-green-100 text-green-700 p-3 mb-4 rounded text-center">
+            <div class="mensaje-sesion bg-green-100 text-green-700 p-3 mb-4 rounded text-center">
                 {{ session('success') }}
             </div>
         @endif

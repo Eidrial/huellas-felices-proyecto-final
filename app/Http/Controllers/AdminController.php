@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Mascota;
 use App\Models\User;
+use App\Models\Estancia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -97,6 +98,27 @@ class AdminController extends Controller
     //eliminar una mascota (con ajax)
     public function eliminarMascota(Mascota $mascota)
     {
+
+        //no permitir borrar mascotas durante x estancias
+        //mensaje específico según el estado de la estancia
+        $existeEstancia = Estancia::where('mascota_id', $mascota->id)->whereIn('estado', ['pendiente', 'confirmada', 'activa'])->orderByRaw("FIELD(estado, 'activa', 'confirmada', 'pendiente')")->first();
+
+        if ($existeEstancia) {
+            if ($existeEstancia->estado == 'pendiente') {
+                $msg = 'No puedes borrar esta mascota porque tiene una estancia pendiente. Cancela la estancia antes de borrarla.';
+            } elseif ($existeEstancia->estado == 'confirmada') {
+                $msg = 'No puedes borrar esta mascota porque tiene una estancia confirmada. Cancela la estancia antes de borrarla.';
+            } else { //activa
+                $msg = 'No puedes borrar esta mascota porque tiene una estancia activa. Espera a que finalice la estancia para poder borrarla.';
+            }
+
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg]);
+            }
+
+            return redirect()->back()->with('error', $msg);
+        }
+
         //borrar la foto del storage si existe (disk public)
         if ($mascota->foto && \Storage::disk('public')->exists($mascota->foto)) {
             \Storage::disk('public')->delete($mascota->foto);
@@ -129,7 +151,7 @@ class AdminController extends Controller
     {
         //no permitir cambiar tu propio rol (el admin siempre será admin)
         if (auth()->id() == $user->id) {
-            return response()->json(['error' => 'No permitido'], 403);
+            return response()->json(['error' => 'No permitido']);
         }
 
         //validar que el rol sea uno permitido
@@ -151,7 +173,7 @@ class AdminController extends Controller
     {
         if (auth()->id() == $user->id) {
             if (request()->ajax()) {
-                return response()->json(['success' => false, 'message' => 'No puedes eliminar tu propio usuario.'], 403);
+                return response()->json(['success' => false, 'message' => 'No puedes eliminar tu propio usuario.']);
             }
             return redirect()->back()->with('error', 'No puedes eliminar tu propio usuario.');
         }

@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    //ELIMINAR MASCOTA DESDE USUARIO
+    //ELIMINAR MASCOTA DESDE USUARIO (con ajax)
     document.querySelectorAll('.btn-eliminar-mascota').forEach(btn => {
         btn.addEventListener('click', function () {
             const mascotaId = this.dataset.id;
@@ -12,9 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 `¿Seguro que quieres borrar "${nombre}"?`,
                 () => {
                     //callback que se ejecuta si el usuario confirma
-                    ajax(`/mascotas/${mascotaId}`, 'DELETE', {}, (data) => {
+                    window.ajax(`/mascotas/${mascotaId}`, 'DELETE', {}, () => {
                         fila.remove();
-                        mostrarMensaje('Mascota eliminada correctamente');
+                        window.mostrarMensaje('Mascota eliminada correctamente');
                     });
                 }
             );

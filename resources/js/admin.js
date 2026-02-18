@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Confirmar cambio de rol',
                 `¿Seguro que quieres cambiar el rol de ${nombre} a ${nuevoRol}?`,
                 () => {
-                    ajax(
+                    window.ajax(
                         `/admin/usuarios/${userId}/rol`,
                         'PUT',
                         { role: nuevoRol },
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 nuevoRol.charAt(0).toUpperCase() + nuevoRol.slice(1);
                             rolAnterior = nuevoRol;
                             window.onModalCancel = null;
-                            mostrarMensaje('Rol actualizado correctamente');
+                            window.mostrarMensaje('Rol actualizado correctamente');
                         }
                     );
                 }
@@ -53,13 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Eliminar usuario',
                 `¿Seguro que quieres eliminar a ${nombre}?`,
                 () => {
-                    ajax(
+                    window.ajax(
                         `/admin/usuarios/${userId}`,
                         'DELETE',
                         {},
                         () => {
                             fila.remove();  //eliminar fila de la tabla
-                            mostrarMensaje('Usuario eliminado correctamente');
+                            window.mostrarMensaje('Usuario eliminado correctamente');
                         }
                     );
                 }
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     //ELIMINAR MASCOTA
-    document.querySelectorAll('.btn-eliminar-mascota').forEach(btn => {
+    document.querySelectorAll('.btn-eliminar-mascota-admin').forEach(btn => {
         btn.addEventListener('click', function (e) {
             e.preventDefault();
 
@@ -80,13 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Eliminar mascota',
                 `¿Seguro que quieres eliminar a ${nombre}?`,
                 () => {
-                    ajax(
+                    window.ajax(
                         `/admin/mascotas/${mascotaId}`,
                         'DELETE',
                         {},
                         () => {
                             fila.remove();
-                            mostrarMensaje('Mascota eliminada correctamente');
+                            window.mostrarMensaje('Mascota eliminada correctamente');
                         }
                     );
                 }
@@ -102,12 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const estadoSpan = document.getElementById(`estado-${mascotaId}`);
 
             //directo sin modal
-            ajax(`/admin/mascotas/${mascotaId}/aprobar`, 'PUT', { aprobado: valor }, (data) => {
+            window.ajax(`/admin/mascotas/${mascotaId}/aprobar`, 'PUT', { aprobado: valor }, (data) => {
                 if (data.success) {
                     estadoSpan.textContent = data.texto; //actualiza texto
                     estadoSpan.className = data.color; //actualiza color
                     btn.parentElement.remove(); //quitar botones porque ya no hacen faltas
-                    mostrarMensaje('Estado de la mascota actualizado');
+                    window.mostrarMensaje('Estado de la mascota actualizado');
                 }
             });
         });
