@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     estadoSpan.textContent = data.texto; //actualiza texto
                     estadoSpan.className = data.color; //actualiza color
                     btn.parentElement.remove(); //quitar botones porque ya no hacen faltas
-                    window.mostrarMensaje('Estado de la mascota actualizado');
+                    window.mostrarMensaje(data.message || 'Estado de la mascota actualizado');
                 }
             });
         });

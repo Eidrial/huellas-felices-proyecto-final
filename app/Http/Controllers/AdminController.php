@@ -77,6 +77,24 @@ class AdminController extends Controller
         $mascota->aprobado = (int) $request->aprobado;
         $mascota->save();
 
+        //si se aprueba, intentar confirmar estancias pendientes
+        $confirmadasAuto = 0;
+        $canceladasAuto = 0;
+
+        if ($mascota->aprobado === 1) {
+            $pendientes = Estancia::estanciasPendientes()->where('mascota_id', $mascota->id)->orderBy('fecha_entrada')->get();
+
+            foreach ($pendientes as $estancia) {
+                if ($estancia->confirmar()) {
+                    $confirmadasAuto++;
+                } else {
+                    //si no hay plaza, se cancela automaticamente
+                    $estancia->cancelar('admin');
+                    $canceladasAuto++;
+                }
+            }
+        }
+
         //array para traducir el estado a texto y color
         //null = pendiente, 1 = aprobada, 0 = no aprobada
         $estados = [
@@ -85,13 +103,19 @@ class AdminController extends Controller
             0 => ['texto' => 'No aprobada', 'color' => 'text-red-600'],
         ];
 
+        //mensaje informativo
+        $message = 'Estado actualizado';
+        if ($mascota->aprobado === 1) {
+            $message = "Mascota aprobada. Estancias confirmadas: {$confirmadasAuto}. Estancias canceladas: {$canceladasAuto}.";
+        }
+
         //devuelve json para que la interfaz se actualice sin recargar la página
         return response()->json([
             'success' => true,
             'aprobado' => $mascota->aprobado, //valor 0 o 1
             'texto' => $estados[$mascota->aprobado]['texto'],  //texto
             'color' => $estados[$mascota->aprobado]['color'],  //color
-            'message' => 'Estado actualizado correctamente'
+            'message' => $message,
         ]);
     }
 
