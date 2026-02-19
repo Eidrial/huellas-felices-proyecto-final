@@ -47,6 +47,8 @@ class Estancia extends Model
 
     //FUNCIONES AUXILIARES
 
+    //PRECIOS
+
     //calcular el precio total automaticamente segun precio_dia y dias de estancia
     public function calcularPrecioTotal()
     {
@@ -69,11 +71,21 @@ class Estancia extends Model
         return $this->precio_total;
     }
 
+    //calcular total incluyendo extras
+    public function totalConExtras()
+    {
+        $extras = $this->cuidados()->where('tipo', 'extra')->sum('precio_extra');
+
+        return ($this->precio_total ?? 0) + $extras;
+    }
+
     //validar si la fecha de entrada es superior o igual a mañana (T+1)
     public static function fechaValida($fecha)
     {
         return strtotime($fecha) >= strtotime('tomorrow');
     }
+
+    //FECHAS
 
     //comprueba si hay disponibilidad para una estancia entre dos fechas
     //la residencia alojara 20 perros como max a la vez (segun config)
@@ -169,6 +181,9 @@ class Estancia extends Model
         return true;
     }
 
+
+    //OPCIONES ESTANCIA
+
     //inicia la estancia (el perro entra en la residencia)
     public function iniciar()
     {
@@ -202,6 +217,31 @@ class Estancia extends Model
         $this->cancelada_por = $quien;
         $this->save();
     }
+
+    //FACTURA ESTANCIA
+
+    //dias de estancia reales
+    public function diasFacturados()
+    {
+        //si se ha cancelado el mismo dia de entrada, se devuelve un dia
+        if ($this->esCancelacionUnDia()) {
+            return 1;
+        }
+
+        $entrada = new \DateTime($this->fecha_entrada);
+        $salida = new \DateTime($this->fecha_salida);
+
+        //calcular los dias reales entre entrada y salida
+        //la fecha de salida no cuenta como dia de estancia
+        return $entrada->diff($salida)->days;
+    }
+
+    //saber si se ha cancelado el mismo dia de entrada
+    public function esCancelacionUnDia()
+    {
+        return $this->estado == 'cancelada' && $this->precio_total == $this->precio_dia;
+    }
+
 
 }
 

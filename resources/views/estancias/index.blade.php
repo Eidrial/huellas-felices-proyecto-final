@@ -63,6 +63,12 @@
                                 <td class="p-3">
                                     <div class="flex gap-2 justify-center flex-wrap">
 
+                                        <!-- ver factura de la estancia -->
+                                        <a href="{{ route('estancias.factura', $estancia) }}"
+                                            class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800">
+                                            Factura
+                                        </a>
+
                                         <!-- EDITAR: pendiente / confirmada / activa -->
                                         @if($estancia->estado == 'pendiente' || $estancia->estado == 'confirmada' || $estancia->estado == 'activa')
                                             <a href="{{ route('estancias.edit', $estancia) }}"

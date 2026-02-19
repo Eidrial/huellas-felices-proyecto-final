@@ -105,6 +105,17 @@ class EstanciaController extends Controller
         return redirect()->route('estancias.index')->with('success', 'Estancia creada correctamente. Recuerda que se paga el primer día.');
     }
 
+    //mostrar factura de estancia
+    public function factura(Estancia $estancia)
+    {
+        //solo el dueño puede verla
+        if ($estancia->mascota->dueno_id != Auth::id()) {
+            return redirect()->route('estancias.index')->with('error', 'No puedes ver esta estancia.');
+        }
+
+        return view('estancias.factura', compact('estancia'));
+    }
+
     //formulario para editar estancia
     public function edit(Estancia $estancia)
     {

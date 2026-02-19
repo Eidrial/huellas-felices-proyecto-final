@@ -52,6 +52,8 @@ Route::middleware(['auth', 'role:usuario'])->group(function () {
     Route::put('/estancias/{estancia}', [EstanciaController::class, 'update'])->name('estancias.update');
     //cancelar estancia
     Route::put('/estancias/{estancia}/cancelar', [EstanciaController::class, 'cancelar'])->name('estancias.cancelar');
+    //factura de estancia
+    Route::get('/estancias/{estancia}/factura', [EstanciaController::class, 'factura'])->name('estancias.factura');
 
 });
 
