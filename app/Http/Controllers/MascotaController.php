@@ -16,7 +16,7 @@ class MascotaController extends Controller
         $usuario = Auth::user();
 
         //obtener sus mascotas
-        $mascotas = $usuario->mascotas;
+        $mascotas = $usuario->mascotas()->with('estancias')->get();
 
         //enviar mascotas a la vista para amostrarlas
         return view('mascotas.index', compact('mascotas'));
@@ -34,7 +34,7 @@ class MascotaController extends Controller
         //validación del formulario
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'especie' => 'required|string|max:255',
+            'especie' => 'required|in:perro',
             'raza' => 'required|string|max:255',
             'edad' => 'required|integer|min:0',
             'peso' => 'required|numeric|min:0',
@@ -94,7 +94,7 @@ class MascotaController extends Controller
         //validar
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'especie' => 'required|string|max:255',
+            'especie' => 'required|in:perro',
             'raza' => 'required|string|max:255',
             'edad' => 'required|integer|min:0',
             'peso' => 'required|numeric|min:0',

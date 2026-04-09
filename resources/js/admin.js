@@ -150,4 +150,72 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    //INICIAR ESTANCIA DESDE ADMIN (con modal)
+    document.querySelectorAll('.btn-iniciar-estancia-admin').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const estanciaId = this.dataset.id;
+            const msg = this.dataset.msg || '¿Seguro que quieres iniciar esta estancia?';
+
+            window.abrirModal(
+                'Iniciar estancia',
+                msg,
+                () => {
+                    const form = document.getElementById(`form-iniciar-estancia-${estanciaId}`);
+                    if (form) form.submit();
+                }
+            );
+        });
+    });
+
+    //FINALIZAR ESTANCIA DESDE ADMIN (con modal)
+    document.querySelectorAll('.btn-finalizar-estancia-admin').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const estanciaId = this.dataset.id;
+            const msg = this.dataset.msg || '¿Seguro que quieres finalizar esta estancia?';
+
+            window.abrirModal(
+                'Finalizar estancia',
+                msg,
+                () => {
+                    const form = document.getElementById(`form-finalizar-estancia-${estanciaId}`);
+                    if (form) form.submit();
+                }
+            );
+        });
+    });
+
+    //BORRAR AVISO DESDE ADMIN (con modal)
+    document.querySelectorAll('.btn-borrar-aviso-admin').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const avisoId = this.dataset.id;
+            const msg = this.dataset.msg || '¿Seguro que quieres borrar este aviso?';
+
+            window.abrirModal(
+                'Borrar aviso',
+                msg,
+                () => {
+                    const form = document.getElementById(`form-borrar-aviso-${avisoId}`);
+                    if (form) form.submit();
+                }
+            );
+        });
+    });
+
+    //BORRAR EXTRA DESDE ADMIN (con modal)
+    document.querySelectorAll('.btn-borrar-extra-admin').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const cuidadoId = this.dataset.id;
+            const msg = this.dataset.msg || '¿Seguro que quieres borrar este extra?';
+
+            window.abrirModal(
+                'Borrar extra',
+                msg,
+                () => {
+                    const form = document.getElementById(`form-borrar-extra-${cuidadoId}`);
+                    if (form) form.submit();
+                }
+            );
+        });
+    });
+
 });

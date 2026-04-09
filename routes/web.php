@@ -6,15 +6,26 @@ use App\Http\Controllers\MascotaController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\EstanciaController;
 use App\Http\Controllers\EstanciaAdminController;
-use App\Http\Controllers\CuidadorController;
+use App\Http\Controllers\CuidadosController;
+use App\Http\Controllers\AvisoController;
 
 Route::get('/', function () {
     return view('home');
 })->name('home');
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    $user = auth()->user();
+
+    if ($user->role === 'admin') {
+        return redirect()->route('admin.estancias.index');
+    }
+
+    if ($user->role === 'cuidador') {
+        return redirect()->route('cuidados.index');
+    }
+
+    return redirect()->route('mascotas.index');
+})->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -39,7 +50,6 @@ Route::middleware(['auth', 'role:usuario'])->group(function () {
     Route::delete('/mascotas/{mascota}', [MascotaController::class, 'destroy'])->name('mascotas.destroy');
 
     //estancias
-
     //listado de estancias
     Route::get('/estancias', [EstanciaController::class, 'index'])->name('estancias.index');
     //formulario crear estancia
@@ -55,13 +65,17 @@ Route::middleware(['auth', 'role:usuario'])->group(function () {
     //factura de estancia
     Route::get('/estancias/{estancia}/factura', [EstanciaController::class, 'factura'])->name('estancias.factura');
 
+    //historial de cuidados de una estancia
+    Route::get('/estancias/{estancia}/historial', [EstanciaController::class, 'historial'])->name('estancias.historial');
+
+    //ver avisos
+    Route::get('/estancias/{estancia}/avisos', [EstanciaController::class, 'avisos'])->name('estancias.avisos');
 });
 
 //necesario estar logueado como admin
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 
     //mascotas
-
     //listado de mascotas
     Route::get('/mascotas', [AdminController::class, 'index'])->name('admin.mascotas.index');
     //editar
@@ -74,7 +88,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::delete('/mascotas/{mascota}', [AdminController::class, 'eliminarMascota'])->name('admin.mascotas.destroy');
 
     //usuarios
-
     //mostrar el listado de usuarios registrados
     Route::get('/usuarios', [AdminController::class, 'usuarios'])->name('admin.usuarios');
     //cambiar el rol de un usuario concreto
@@ -91,7 +104,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::put('/usuarios/{user}', [AdminController::class, 'actualizarUsuario'])->name('admin.usuarios.actualizar');
 
     //estancias
-
     //listado de estancias
     Route::get('/estancias', [EstanciaAdminController::class, 'index'])->name('admin.estancias.index');
     //confirmar estancia
@@ -102,17 +114,26 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::put('/estancias/{estancia}/finalizar', [EstanciaAdminController::class, 'finalizar'])->name('admin.estancias.finalizar');
     //cancelar estancia
     Route::put('/estancias/{estancia}/cancelar', [EstanciaAdminController::class, 'cancelar'])->name('admin.estancias.cancelar');
+
+    //cuidados
+    //borrar un extra
+    Route::delete('/cuidados/{cuidado}/extra', [CuidadosController::class, 'borrarExtra'])->name('cuidados.borrarExtra');
+    //borrar aviso
+    Route::delete('/avisos/{aviso}', [AvisoController::class, 'borrarAviso'])->name('avisos.borrarAviso');
 });
 
-Route::middleware(['auth', 'role:cuidador'])->prefix('cuidador')->group(function () {
-    //panel principal del cuidador
-    Route::get('/', [CuidadorController::class, 'index'])->name('cuidador.index');
+//necesario estar logueado como admin o cuidador
+Route::middleware(['auth', 'role:admin,cuidador'])->group(function () {
+    //panel principal cuidados
+    Route::get('/cuidados', [CuidadosController::class, 'index'])->name('cuidados.index');
     //detalle de una estancia
-    Route::get('/estancia/{estancia}', [CuidadorController::class, 'show'])->name('cuidador.estancia.show');
-    //añadir extra
-    Route::post('/cuidados', [CuidadorController::class, 'store'])->name('cuidador.cuidados.store');
+    Route::get('/cuidados/estancia/{estancia}', [CuidadosController::class, 'show'])->name('cuidados.show');
     //completar cuidado
-    Route::put('/cuidados/{cuidado}/completar', [CuidadorController::class, 'completar'])->name('cuidador.cuidados.completar');
+    Route::put('/cuidados/{cuidado}/completar', [CuidadosController::class, 'completar'])->name('cuidados.completar');
+    //añadir extra
+    Route::post('/cuidados', [CuidadosController::class, 'store'])->name('cuidados.store');
+    //crear aviso
+    Route::post('/avisos', [AvisoController::class, 'store'])->name('avisos.store');
 });
 
 require __DIR__ . '/auth.php';

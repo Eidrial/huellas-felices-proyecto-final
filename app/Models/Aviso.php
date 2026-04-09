@@ -3,23 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Mascota;
+use App\Models\Estancia;
 use App\Models\User;
 
 class Aviso extends Model
 {
     protected $fillable = [
-        'mascota_id',
+        'estancia_id',
         'user_id',
+        'tipo',
         'mensaje',
     ];
 
-    //relacion con la mascota
-    public function mascota()
+    public function estancia()
     {
-        return $this->belongsTo(Mascota::class);
+        return $this->belongsTo(Estancia::class);
     }
-
     //relacion con el usuario que envia el aviso (admin o cuidador)
     public function usuario()
     {

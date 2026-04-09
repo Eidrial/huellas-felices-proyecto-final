@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Estancia;
 use App\Models\Mascota;
+use App\Models\Cuidado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EstanciaConfirmadaMail;
 
 class EstanciaController extends Controller
 {
@@ -13,7 +16,24 @@ class EstanciaController extends Controller
     public function index()
     {
         $estancias = Auth::user()->estancias()->with('mascota')->orderBy('fecha_entrada', 'desc')->get();
-        return view('estancias.index', compact('estancias'));
+
+        $pendientesHoy = [];
+
+        $hoy = date('Y-m-d');
+
+        //filtrar solo estancias activas para calcular cuidados pendientes de hoy
+        $estanciasActivas = $estancias->where('estado', 'activa');
+
+        foreach ($estanciasActivas as $estancia) {
+
+            $pendientesHoy[$estancia->id] = Cuidado::where('estancia_id', $estancia->id)
+                ->where('completado', false)
+                ->where('fecha', $hoy)
+                ->where('tipo', '!=', 'extra')
+                ->count();
+        }
+
+        return view('estancias.index', compact('estancias', 'pendientesHoy'));
     }
 
     //formulario para crear nueva estancia
@@ -31,7 +51,16 @@ class EstanciaController extends Controller
             'mascota_id' => 'required|exists:mascotas,id',
             'fecha_entrada' => 'required|date',
             'fecha_salida' => 'required|date|after:fecha_entrada',
+            'medicacion_descripcion' => 'nullable|string|max:255',
+            'medicacion_horas' => 'nullable|string|max:255',
         ]);
+
+        //si hay medicacion, obligatorio poner horas
+        if ($request->medicacion_descripcion && (!$request->medicacion_horas || trim($request->medicacion_horas) == '')) {
+            return back()->withErrors([
+                'medicacion_horas' => 'Si añades medicación, debes indicar las horas de las tomas.'
+            ])->withInput(); //devolver al formulario manteniendo los datos que el usuario ya habia escrito
+        }
 
         $mascota = Mascota::find($request->mascota_id);
 
@@ -63,6 +92,22 @@ class EstanciaController extends Controller
         $salida = new \DateTime($request->fecha_salida);
         $dias = $entrada->diff($salida)->days;
 
+        //no permitir entradas en domingo
+        if ($entrada->format('w') == 0) {
+            return back()->with('error', 'No se permiten entradas en domingo.');
+        }
+
+        //no permitir salidas en domingo
+        if ($salida->format('w') == 0) {
+            return back()->with('error', 'No se permiten salidas en domingo.');
+        }
+
+        //minimo de dias
+        if ($dias < config('residencia.min_dias_estancia')) {
+            return back()->with('error', 'La estancia mínima es de ' . config('residencia.min_dias_estancia') . ' días.');
+        }
+
+        //maximo de dias
         if ($dias > config('residencia.max_dias_estancia')) {
             return back()->with('error', 'La estancia no puede superar los ' . config('residencia.max_dias_estancia') . ' días.');
         }
@@ -91,16 +136,34 @@ class EstanciaController extends Controller
             $estado = 'confirmada';
         }
 
+        $medicacionDescripcion = trim($request->medicacion_descripcion);
+        $medicacionHoras = trim($request->medicacion_horas);
+
         $estancia = Estancia::create([
             'mascota_id' => $mascota->id,
             'estado' => $estado,
             'fecha_entrada' => $request->fecha_entrada,
             'fecha_salida' => $request->fecha_salida,
             'precio_dia' => config('residencia.precio_dia'),
+            'medicacion_descripcion' => $medicacionDescripcion ? $medicacionDescripcion : null,
+            'medicacion_horas' => $medicacionHoras ? $medicacionHoras : null,
         ]);
 
         $estancia->calcularPrecioTotal();
         $estancia->save();
+
+        //si la estancia ha quedado confirmada automaticamente, mandar email
+        if ($estancia->estado == 'confirmada') {
+            $estancia->load('mascota.dueno');
+
+            $emailDueno = $estancia->mascota->dueno->email ?? null;
+            //si hay override en .env, mandar ahi (pruebass)
+            $destinatario = config('mail.to_override') ? config('mail.to_override') : $emailDueno;
+
+            if ($destinatario) {
+                Mail::to($destinatario)->send(new EstanciaConfirmadaMail($estancia));
+            }
+        }
 
         return redirect()->route('estancias.index')->with('success', 'Estancia creada correctamente. Recuerda que se paga el primer día.');
     }
@@ -141,9 +204,23 @@ class EstanciaController extends Controller
             return redirect()->route('estancias.index')->with('error', 'No puedes editar una estancia finalizada o cancelada.');
         }
 
+        $hoy = date('Y-m-d');
+
+        //no permitir modificar el mismo dia de salida
+        if ($hoy >= $estancia->fecha_salida) {
+            return redirect()->route('estancias.index')->with('error', 'No se puede modificar la estancia el día de salida.');
+        }
+
         $request->validate([
             'fecha_salida' => 'required|date|after:' . $estancia->fecha_entrada,
         ]);
+
+        $nuevaSalida = new \DateTime($request->fecha_salida);
+
+        //no permitir salidas en domingo
+        if ($nuevaSalida->format('w') == 0) {
+            return back()->with('error', 'No se permiten salidas en domingo.');
+        }
 
         //al ampliar debe haber disponibilidad
         if (!$estancia->puedeAmpliarse($request->fecha_salida)) {
@@ -199,5 +276,86 @@ class EstanciaController extends Controller
         //si no es pendiente ni confirmada, no se puede cancelar
         return redirect()->route('estancias.index')->with('error', 'No puedes cancelar esta estancia. Contacta con administración.');
 
+    }
+
+    //historial de cuidados para el dueño del animal
+    public function historial(Estancia $estancia)
+    {
+        if (!$estancia->mascota || $estancia->mascota->dueno_id != Auth::id()) {
+            return redirect()->route('estancias.index')->with('error', 'No puedes ver el historial de esta estancia.');
+        }
+
+        $hoy = now()->toDateString();
+        $ahoraHora = now()->format('H:i:s');
+
+        //REALIZADOS (historial)
+        $realizados = $estancia->cuidados()
+            ->with('usuario')
+            ->where('completado', true)
+            ->orderByDesc('fecha')
+            ->orderBy('hora')
+            ->get()
+            ->groupBy('fecha');
+
+        $totalRealizados = $estancia->cuidados()->where('completado', true)->count();
+
+        //PENDIENTES (para atrasadas y hoy)
+        $listaPendientes = $estancia->cuidados()
+            ->where('completado', false)
+            ->orderBy('fecha')
+            ->orderBy('hora')
+            ->get();
+
+        $atrasadas = [];
+        $pendientesHoy = [];
+
+        foreach ($listaPendientes as $cuidado) {
+            //atrasada si: fecha menor que hoy o fecha == hoy y hora existe y hora menor que ahora
+            $esAtrasada = false;
+
+            if ($cuidado->fecha < $hoy) {
+                $esAtrasada = true;
+            } elseif ($cuidado->fecha == $hoy && $cuidado->hora && $cuidado->hora < $ahoraHora) {
+                $esAtrasada = true;
+            }
+
+            if ($esAtrasada) {
+                $atrasadas[] = $cuidado;
+            } elseif ($cuidado->fecha == $hoy) {
+                $pendientesHoy[] = $cuidado;
+            }
+        }
+
+        $totalAtrasadas = count($atrasadas);
+        $totalPendientesHoy = count($pendientesHoy);
+
+        $atrasadas = collect($atrasadas)->groupBy('fecha');
+        $pendientesHoy = collect($pendientesHoy)->groupBy('fecha');
+
+        return view('estancias.historial', compact(
+            'estancia',
+            'hoy',
+            'realizados',
+            'totalRealizados',
+            'atrasadas',
+            'totalAtrasadas',
+            'pendientesHoy',
+            'totalPendientesHoy'
+        ));
+    }
+
+    //avisos para el dueño (por estancia)
+    public function avisos(Estancia $estancia)
+    {
+        if (!$estancia->mascota || $estancia->mascota->dueno_id != Auth::id()) {
+            return redirect()->route('estancias.index')->with('error', 'No puedes ver los avisos de esta estancia.');
+        }
+
+        $avisos = $estancia->avisos()
+            ->with('usuario')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('estancias.avisos', compact('estancia', 'avisos'));
     }
 }

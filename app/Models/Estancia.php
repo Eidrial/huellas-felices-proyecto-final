@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Mascota;
 use App\Models\Cuidado;
+use App\Models\Aviso;
 
 class Estancia extends Model
 {
@@ -16,12 +17,20 @@ class Estancia extends Model
         'precio_dia',
         'precio_total',
         'cancelada_por',
+        'medicacion_descripcion',
+        'medicacion_horas',
     ];
 
     protected $dates = [
         'fecha_entrada',
         'fecha_salida',
     ];
+
+    //relacion con avisos de la estancia
+    public function avisos()
+    {
+        return $this->hasMany(Aviso::class);
+    }
 
     public function mascota()
     {
@@ -194,6 +203,8 @@ class Estancia extends Model
         $this->estado = 'activa';
         $this->save();
 
+        $this->generarCuidadosBase();
+
         return true;
     }
 
@@ -242,6 +253,112 @@ class Estancia extends Model
         return $this->estado == 'cancelada' && $this->precio_total == $this->precio_dia;
     }
 
+
+    //CUIDADOS BASE
+    public function generarCuidadosBase()
+    {
+        //evitar duplicados: si ya existen cuidados BASE (no extras), no generar otra vez
+        $primerDia = (new \DateTime($this->fecha_entrada))->format('Y-m-d');
+
+        if ($this->cuidados()->where('tipo', '!=', 'extra')->where('fecha', $primerDia)->exists()) {
+            return;
+        }
+
+        $entrada = new \DateTime($this->fecha_entrada);
+        $salida = new \DateTime($this->fecha_salida);
+
+        //recorrer cada dia desde entrada hasta el dia anterior a salida
+        while ($entrada < $salida) {
+
+            $fechaActual = $entrada->format('Y-m-d');
+
+            //paseo mañana
+            Cuidado::create([
+                'estancia_id' => $this->id,
+                'tipo' => 'paseo',
+                'fecha' => $fechaActual,
+                'hora' => '09:00',
+                'descripcion' => 'Paseo de la mañana',
+                'completado' => false,
+            ]);
+
+            //desayuno
+            Cuidado::create([
+                'estancia_id' => $this->id,
+                'tipo' => 'alimentacion',
+                'fecha' => $fechaActual,
+                'hora' => '10:00',
+                'descripcion' => 'Desayuno',
+                'completado' => false,
+            ]);
+
+            //paseo mediodia
+            Cuidado::create([
+                'estancia_id' => $this->id,
+                'tipo' => 'paseo',
+                'fecha' => $fechaActual,
+                'hora' => '14:00',
+                'descripcion' => 'Paseo del mediodía',
+                'completado' => false,
+            ]);
+
+            //juego / socializacion
+            Cuidado::create([
+                'estancia_id' => $this->id,
+                'tipo' => 'juego',
+                'fecha' => $fechaActual,
+                'hora' => '17:00',
+                'descripcion' => 'Juego y socialización supervisada',
+                'completado' => false,
+            ]);
+
+            //paseo tarde
+            Cuidado::create([
+                'estancia_id' => $this->id,
+                'tipo' => 'paseo',
+                'fecha' => $fechaActual,
+                'hora' => '19:00',
+                'descripcion' => 'Paseo de la tarde',
+                'completado' => false,
+            ]);
+
+            //cena
+            Cuidado::create([
+                'estancia_id' => $this->id,
+                'tipo' => 'alimentacion',
+                'fecha' => $fechaActual,
+                'hora' => '20:00',
+                'descripcion' => 'Cena',
+                'completado' => false,
+            ]);
+
+            //medicacion (si existe)
+            if ($this->medicacion_descripcion && $this->medicacion_horas) {
+
+                $horas = explode(',', $this->medicacion_horas);
+
+                foreach ($horas as $hora) {
+                    $hora = trim($hora);
+
+                    if ($hora !== '') {
+                        $horaNorm = date('H:i', strtotime($hora));
+
+                        Cuidado::create([
+                            'estancia_id' => $this->id,
+                            'tipo' => 'medicacion',
+                            'fecha' => $fechaActual,
+                            'hora' => $horaNorm,
+                            'descripcion' => $this->medicacion_descripcion,
+                            'completado' => false,
+                        ]);
+                    }
+                }
+            }
+
+            //pasar al siguiente dia
+            $entrada->modify('+1 day');
+        }
+    }
 
 }
 

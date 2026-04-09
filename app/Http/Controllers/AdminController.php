@@ -6,7 +6,6 @@ use App\Models\Mascota;
 use App\Models\User;
 use App\Models\Estancia;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -31,7 +30,7 @@ class AdminController extends Controller
         //validar campos del formulario
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'especie' => 'required|string|max:255',
+            'especie' => 'required|in:perro',
             'raza' => 'nullable|string|max:255',
             'edad' => 'required|integer|min:0',
             'peso' => 'required|numeric|min:0',

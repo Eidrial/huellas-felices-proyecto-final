@@ -12,6 +12,7 @@ class Cuidado extends Model
         'estancia_id',
         'tipo',
         'descripcion',
+        'fecha',
         'hora',
         'precio_extra', //si es extra
         'user_id',  //quien lo crea o realiza
@@ -27,5 +28,11 @@ class Cuidado extends Model
     public function usuario()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    //solo cuidados pendientes
+    public function scopePendiente($query)
+    {
+        return $query->where('completado', false);
     }
 }

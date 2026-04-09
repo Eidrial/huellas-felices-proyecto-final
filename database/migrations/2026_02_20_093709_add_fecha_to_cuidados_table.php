@@ -10,7 +10,7 @@ return new class extends Migration {
     {
         Schema::table('cuidados', function (Blueprint $table) {
             //fecha del cuidado
-            $table->date('fecha')->default(date('Y-m-d'))->after('descripcion');
+            $table->date('fecha')->after('descripcion');
         });
     }
 
