@@ -5,48 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\Cuidado;
 use App\Models\Estancia;
 use App\Models\Aviso;
+use App\Models\Mascota;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
 class CuidadosController extends Controller
 {
 
-    //tarea atrasada si su fecha es anterior a hoy o es hoy pero su hora programada ha pasado
-    private function esAtrasada($fecha, $hora, $hoy, $ahoraHora)
-    {
-        //si es de un dia anterior a hoy = tarea atrasada
-        if ($fecha < $hoy) {
-            return true;
-        }
-
-        //si es hoy con horAa y esa hora es menor que la hora actual = tarea atrasada
-        if ($fecha == $hoy && $hora && $hora < $ahoraHora) {
-            return true;
-        }
-
-        //en cualquier otro caso = tarea no atrasada
-        return false;
-    }
-
-    //se puede marcar si NO es futura (con margen de 15 min para tareas de hoy con hora)
-    private function sePuedeMarcar($fecha, $hora, $hoy, $ahoraMas15)
-    {
-        //si es de un dia posterior a hoy = tarea futura (NO se puede marcar)
-        if ($fecha > $hoy)
-            return false;
-
-        //si es hoy con hora, solo se puede marcar a partir de 15 min antes
-        if ($fecha == $hoy && $hora && $hora > $ahoraMas15) {
-            return false;
-        }
-
-        //en cualquier otro caso = se puede marcar
-        return true;
-    }
-
     //panel principal del cuidados
     public function index()
     {
+        //cancelar automaticamente pendientes y sin disponibilidad caducadas sin cobrar
+        Estancia::cancelarCaducadasSinCobro();
+
         //dia actual
         $hoy = now()->toDateString();
         //hora actual
@@ -95,7 +66,7 @@ class CuidadosController extends Controller
         $idsEstancias = $estancias->pluck('id');
 
         $cuidados = Cuidado::whereIn('estancia_id', $idsEstancias)
-            ->pendiente()
+            ->pendientes()
             ->orderBy('fecha')
             ->orderBy('hora')
             ->get()
@@ -120,7 +91,7 @@ class CuidadosController extends Controller
 
             foreach ($tareas as $tarea) {
 
-                $esAtrasada = $this->esAtrasada($tarea->fecha, $tarea->hora, $hoy, $ahoraHora);
+                $esAtrasada = $tarea->esAtrasado($hoy, $ahoraHora);
 
                 //contadores
                 if ($esAtrasada) {
@@ -161,6 +132,57 @@ class CuidadosController extends Controller
         ));
     }
 
+    //listado de estancias para cuidador
+    public function estancias(Request $request)
+    {
+        //cancelar automaticamente pendientes y sin disponibilidad caducadas sin cobrar
+        Estancia::cancelarCaducadasSinCobro();
+
+        $vista = $request->get('vista', 'abiertas');
+
+        //totales para las pestañas
+        $totalAbiertas = Estancia::whereIn('estado', [
+            'pendiente',
+            'confirmada',
+            'activa',
+            'sin_disponibilidad'
+        ])->count();
+
+        $totalHistorial = Estancia::whereIn('estado', [
+            'finalizada',
+            'cancelada'
+        ])->count();
+
+        //consulta base con mascota y dueño
+        $consulta = Estancia::with('mascota.dueno');
+
+        //filtrar segun la pestaña
+        if ($vista === 'historial') {
+            $consulta->whereIn('estado', ['finalizada', 'cancelada']);
+        } else {
+            $consulta->whereIn('estado', [
+                'pendiente',
+                'confirmada',
+                'activa',
+                'sin_disponibilidad'
+            ]);
+        }
+
+        //ordenar y paginar solo las estancias de esa pestaña (cuidadores)
+        $estancias = $consulta
+            ->orderByRaw("FIELD(estado, 'activa', 'confirmada', 'pendiente', 'sin_disponibilidad', 'finalizada', 'cancelada')")
+            ->orderBy('fecha_entrada', 'asc')
+            ->paginate(6)
+            ->appends(['vista' => $vista]);
+
+        return view('cuidados.estancias', compact(
+            'estancias',
+            'vista',
+            'totalAbiertas',
+            'totalHistorial'
+        ));
+    }
+
     //agrupar lista por fecha
     private function agruparPorDia($lista)
     {
@@ -171,7 +193,7 @@ class CuidadosController extends Controller
     public function show(Estancia $estancia)
     {
         //solo se ve en el panel si esta confirmada o activa
-        if ($estancia->estado != 'confirmada' && $estancia->estado != 'activa') {
+        if (!$estancia->esConfirmada() && !$estancia->esActiva()) {
             return redirect()->route('cuidados.index')->with('error', 'No puedes ver esta estancia.');
         }
 
@@ -184,86 +206,81 @@ class CuidadosController extends Controller
         //hora actual + 15 minutos
         $ahoraMas15 = now()->addMinutes(15)->format('H:i:s');
 
-        //filtro: hoy - atrasadas - todos - realizados (por defecto = hoy)
+        //filtro: hoy - atrasadas - realizados (por defecto = hoy)
         $filtro = request('filtro', 'hoy');
+
+        //evitar filtros que ya no existen
+        if (!in_array($filtro, ['hoy', 'atrasadas', 'realizados'])) {
+            $filtro = 'hoy';
+        }
 
         //inicializar todo para no tener fallos
         $atrasadas = [];
         $pendientesHoy = [];
 
-        //solo para el filtro todos
-        $todasAtrasadas = [];
-        $todasHoy = [];
-        $todasFuturas = [];
+        //contador total de atrasadas
+        $totalAtrasadas = 0;
 
         //solo para el filtro realizados (agrupado por dia)
+        $realizados = null;
         $realizadosPorDia = [];
         $totalRealizados = 0;
 
         //AGRUPADOS POR DIA
         $atrasadasPorDia = [];
         $pendientesHoyPorDia = [];
-        $todasAtrasadasPorDia = [];
-        $todasHoyPorDia = [];
-        $todasFuturasPorDia = [];
+
+        //cuidados pendientes hasta hoy para calcular atrasadas y pendientes de hoy
+        $cuidadosPendientesHastaHoy = Cuidado::where('estancia_id', $estancia->id)
+            ->pendientesBase()
+            ->with('usuario')
+            ->where('fecha', '<=', $hoy)
+            ->orderBy('fecha')
+            ->orderBy('hora')
+            ->get();
+
+        //calcular contador total de atrasadas
+        foreach ($cuidadosPendientesHastaHoy as $cuidado) {
+            if ($cuidado->esAtrasado($hoy, $ahoraHora)) {
+                $totalAtrasadas++;
+            }
+        }
 
         //REALIZADOS (completados)
         if ($filtro == 'realizados') {
 
-            //todos los completados de esta estancia
             $realizados = Cuidado::where('estancia_id', $estancia->id)
-                ->where('completado', true)
+                ->realizados()
                 ->with('usuario')
-                ->orderByDesc('fecha') //ordena por fecha mas reciente arriba
-                ->orderBy('hora')
-                ->get();
+                ->orderByDesc('fecha')
+                ->orderByDesc('hora')
+                ->paginate(4, pageName: 'realizados_page')
+                ->withQueryString(); //mantiene los parametros actuales de la url al cambiar de pagg
 
-            //total realizados (para mostrar en la vista)
-            $totalRealizados = $realizados->count();
+            $totalRealizados = Cuidado::where('estancia_id', $estancia->id)
+                ->realizados()
+                ->count();
 
-            //agrupar por fecha
-            $realizadosPorDia = $this->agruparPorDia($realizados);
+            $realizadosPorDia = $this->agruparPorDia($realizados->getCollection());
 
         } else {
 
-            //PENDIENTES (hoy/atrasadas/todos)
-
-            //pendientes de esta estancia (no extras)
-            $pendientes = Cuidado::where('estancia_id', $estancia->id)
-                ->pendiente()
-                ->where('tipo', '!=', 'extra')
-                ->with('usuario')
-                ->orderBy('fecha')
-                ->orderBy('hora');
-
-            //si NO es todos, solo mostrar hasta hoy (hoy + anteriores)
-            if ($filtro != 'todos') {
-                $pendientes->where('fecha', '<=', $hoy);
-            }
-
-            $lista = $pendientes->get();
+            //PENDIENTES (hoy/atrasadas)
+            $lista = $cuidadosPendientesHastaHoy;
 
             foreach ($lista as $cuidado) {
 
                 //saber si la tarea esta atrasada
-                $esAtrasada = $this->esAtrasada($cuidado->fecha, $cuidado->hora, $hoy, $ahoraHora);
+                $esAtrasada = $cuidado->esAtrasado($hoy, $ahoraHora);
 
-                if ($filtro == 'todos') {
-                    //si el filtro es todos, separar en atrasadas - hoy - futuras
-                    if ($esAtrasada) {
-                        $todasAtrasadas[] = $cuidado;
-                    } elseif ($cuidado->fecha == $hoy) {
-                        $todasHoy[] = $cuidado;
-                    } else {
-                        $todasFuturas[] = $cuidado;
-                    }
-                } else {
-                    //si el filtro es hoy o atrasadas, separar en atrasadas - hoy
-                    if ($esAtrasada) {
-                        $atrasadas[] = $cuidado;
-                    } elseif ($cuidado->fecha == $hoy) {
-                        $pendientesHoy[] = $cuidado;
-                    }
+                //si es atrasada, va en atrasadas
+                if ($esAtrasada) {
+                    $atrasadas[] = $cuidado;
+                }
+
+                //si es de hoy, va en hoy (aunque tambien este atrasada)
+                if ($cuidado->fecha == $hoy) {
+                    $pendientesHoy[] = $cuidado;
                 }
             }
 
@@ -277,45 +294,49 @@ class CuidadosController extends Controller
             //agrupar por fecha para mostrar por dias en la vista
             $atrasadasPorDia = $this->agruparPorDia($atrasadas);
             $pendientesHoyPorDia = $this->agruparPorDia($pendientesHoy);
-
-            $todasAtrasadasPorDia = $this->agruparPorDia($todasAtrasadas);
-            $todasHoyPorDia = $this->agruparPorDia($todasHoy);
-            $todasFuturasPorDia = $this->agruparPorDia($todasFuturas);
         }
 
+        //extras siempre, independientemente del filtro
+        $extras = Cuidado::where('estancia_id', $estancia->id)
+            ->extras()
+            ->realizados()
+            ->with('usuario')
+            ->orderByDesc('fecha')
+            ->orderByDesc('hora')
+            ->paginate(4, pageName: 'extras_page')
+            ->withQueryString();
+
         //avisos de la estancia
-        //ultimos 10 
         $avisos = Aviso::where('estancia_id', $estancia->id)
             ->with('usuario')
             ->orderByDesc('created_at')
-            ->take(10)
-            ->get();
+            ->paginate(4, pageName: 'avisos_page')
+            ->withQueryString();
+
+        $filtrosVisuales = Cuidado::getFiltrosVisuales();
 
         return view('cuidados.show', compact(
             'estancia',
             'hoy',
             'filtro',
+            'filtrosVisuales',
 
             //para los contadores de la vista
             'atrasadas',
             'pendientesHoy',
-            'todasAtrasadas',
-            'todasHoy',
-            'todasFuturas',
+            'totalAtrasadas',
 
             //agrupados por dia
             'atrasadasPorDia',
             'pendientesHoyPorDia',
-            'todasAtrasadasPorDia',
-            'todasHoyPorDia',
-            'todasFuturasPorDia',
 
             'ahoraHora',
             'ahoraMas15',
+            'realizados',
             'realizadosPorDia',
             'totalRealizados',
 
-            //avisos
+            'extras',
             'avisos'
         ));
     }
@@ -335,7 +356,7 @@ class CuidadosController extends Controller
         $estancia = Estancia::find($request->estancia_id);
 
         //solo si la estancia esta activa
-        if (!$estancia || $estancia->estado != 'activa') {
+        if (!$estancia || !$estancia->esActiva()) {
             return back()->with('error', 'No puedes añadir extras a una estancia no activa.');
         }
 
@@ -364,7 +385,7 @@ class CuidadosController extends Controller
     public function completar(Cuidado $cuidado)
     {
         //solo si la estancia esta activa
-        if ($cuidado->estancia->estado != 'activa') {
+        if (!$cuidado->estancia->esActiva()) {
             return back()->with('error', 'No puedes completar cuidados de una estancia no activa.');
         }
 
@@ -382,7 +403,7 @@ class CuidadosController extends Controller
         }
 
         //si no se puede marcar aun, error
-        if (!$this->sePuedeMarcar($cuidado->fecha, $cuidado->hora, $hoy, $ahoraMas15)) {
+        if (!$cuidado->sePuedeMarcar($hoy, $ahoraMas15)) {
             return back()->with('error', 'No puedes marcar un cuidado antes de su hora/fecha (margen 15 min).');
         }
 
@@ -402,7 +423,7 @@ class CuidadosController extends Controller
             return back()->with('error', 'Solo un administrador puede borrar extras.');
         }
 
-        if ($cuidado->estancia->estado != 'activa') {
+        if (!$cuidado->estancia->esActiva()) {
             return back()->with('error', 'No puedes borrar extras de una estancia no activa.');
         }
 
@@ -420,6 +441,24 @@ class CuidadosController extends Controller
         $cuidado->delete();
 
         return back()->with('success', 'Extra eliminado correctamente.');
+    }
+
+    //listado de mascotas para cuidador
+    public function mascotas()
+    {
+        $mascotas = Mascota::with(['dueno', 'estancias'])
+            ->orderByDesc('created_at')
+            ->paginate(6);
+
+        return view('admin.mascotas', compact('mascotas'));
+    }
+
+    //ver ficha de mascota para cuidador
+    public function showMascota(Mascota $mascota)
+    {
+        $mascota->load('dueno', 'estancias');
+
+        return view('cuidados.show-mascota', compact('mascota'));
     }
 
 }

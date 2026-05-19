@@ -24,4 +24,24 @@ class Aviso extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    
+    //datos visuales segun el tipo de aviso
+    public function getAvisoVisual()
+    {
+        if ($this->tipo == 'importante') {
+            return [
+                'texto' => 'Importante',
+                'barra' => 'bg-[#c9342e]',
+                'punto' => 'bg-[#c9342e]',
+                'etiqueta' => 'text-[#9b2a2a]',
+            ];
+        }
+
+        return [
+            'texto' => 'Info',
+            'barra' => 'bg-[#3a7abf]',
+            'punto' => 'bg-[#3a7abf]',
+            'etiqueta' => 'text-[#1a4f8a]',
+        ];
+    }
 }

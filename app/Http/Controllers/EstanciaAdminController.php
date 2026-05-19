@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Estancia;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\EstanciaConfirmadaMail;
 use App\Mail\FacturaDisponibleMail;
@@ -10,14 +11,54 @@ use App\Mail\FacturaDisponibleMail;
 class EstanciaAdminController extends Controller
 {
     //listado de todas las estancias
-    public function index()
+    public function index(Request $request)
     {
-        //obtener estancias con mascota y dueño, ordenadas primero por estado (activas, confirmadas, pendientes, finalizadas, canceladas) y dentro de cada grupo por fecha de entrada
-        $estancias = Estancia::with('mascota.dueno')
-            ->orderByRaw("FIELD(estado, 'activa', 'confirmada', 'pendiente', 'finalizada', 'cancelada')")
+        //cancelar automaticamente pendientes y sin disponibilidad caducadas sin cobrar
+        Estancia::cancelarCaducadasSinCobro();
+
+        $vista = $request->get('vista', 'abiertas');
+
+        //totales para las pestaña
+        $totalAbiertas = Estancia::whereIn('estado', [
+            'pendiente',
+            'confirmada',
+            'activa',
+            'sin_disponibilidad'
+        ])->count();
+
+        $totalHistorial = Estancia::whereIn('estado', [
+            'finalizada',
+            'cancelada'
+        ])->count();
+
+        //consulta base con mascota y dueño
+        $consulta = Estancia::with('mascota.dueno');
+
+        //filtrar segun la pestañas
+        if ($vista === 'historial') {
+            $consulta->whereIn('estado', ['finalizada', 'cancelada']);
+        } else {
+            $consulta->whereIn('estado', [
+                'pendiente',
+                'confirmada',
+                'activa',
+                'sin_disponibilidad'
+            ]);
+        }
+
+        //ordenar y paginar solo las estancias de esa pestaña (admin)
+        $estancias = $consulta
+            ->orderByRaw("FIELD(estado, 'activa', 'confirmada', 'pendiente', 'sin_disponibilidad', 'finalizada', 'cancelada')")
             ->orderBy('fecha_entrada', 'asc')
-            ->get();
-        return view('admin.estancias', compact('estancias'));
+            ->paginate(6)
+            ->appends(['vista' => $vista]);
+
+        return view('admin.estancias', compact(
+            'estancias',
+            'vista',
+            'totalAbiertas',
+            'totalHistorial'
+        ));
     }
 
     //confirmar estancia
@@ -87,9 +128,11 @@ class EstanciaAdminController extends Controller
         }
 
         //si la estancia termina antes de la fecha prevista, ajustar salida real y recalcular precio
-        $hoy = now()->toDateString();
+        $hoy = date('Y-m-d');
+        $manana = date('Y-m-d', strtotime('+1 day'));
+
         if ($hoy < $estancia->fecha_salida) {
-            $estancia->fecha_salida = $hoy;
+            $estancia->fecha_salida = $manana;
             $estancia->calcularPrecioTotal();
             $estancia->save();
         }
@@ -116,13 +159,64 @@ class EstanciaAdminController extends Controller
     //cancelar estancia (admin)
     public function cancelar(Estancia $estancia)
     {
-        //solo permitir cancelar si esta pendiente o confirmada
-        if ($estancia->estado != 'pendiente' && $estancia->estado != 'confirmada') {
-            return back()->with('error', 'Solo se pueden cancelar estancias pendientes o confirmadas.');
+        //solo permitir cancelar si esta pendiente, sin disponibilidad, confirmada o activa
+        if (!$estancia->esPendiente() && !$estancia->esSinDisponibilidad() && !$estancia->esConfirmada() && !$estancia->esActiva()) {
+            return back()->with('error', 'No se puede cancelar esta estancia.');
         }
 
-        $estancia->cancelar('admin');
+        $hoy = date('Y-m-d');
+        $entrada = date('Y-m-d', strtotime($estancia->fecha_entrada));
 
-        return back()->with('success', 'Estancia cancelada correctamente.');
+        //sin disponibilidad = cancelable y sin cobrar
+        if ($estancia->esSinDisponibilidad()) {
+            $estancia->cancelarSinCobro('admin');
+
+            return back()->with('success', 'Estancia cancelada correctamente.');
+        }
+
+        //pendiente = siempre cancelable y sin penalizar
+        if ($estancia->esPendiente()) {
+            $estancia->cancelarSinCobro('admin');
+
+            return back()->with('success', 'Estancia cancelada correctamente.');
+        }
+
+        //confirmada = cancelable
+        if ($estancia->esConfirmada()) {
+
+            //si cancela el mismo dia de entrada, se cobra 1 dia
+            if ($hoy == $entrada) {
+                $estancia->aplicarCancelacionUnDia();
+
+                $estancia->cancelar('admin');
+
+                return back()->with('success', 'Estancia cancelada. Al ser el mismo día de entrada, se cobra 1 día.');
+            }
+
+            //si es antes del dia de entrada, se cancela normal, sin penalizar
+            if ($hoy < $entrada) {
+                $estancia->cancelarSinCobro('admin');
+
+                return back()->with('success', 'Estancia cancelada correctamente.');
+            }
+
+            //si ha pasado dia de entrada, se cobra solo el tiempo real
+            $estancia->aplicarCancelacionActiva();
+
+            $estancia->cancelar('admin');
+
+            return back()->with('success', 'Estancia cancelada. Se cobrará solo el tiempo que ha estado en la residencia.');
+        }
+
+        //activa = se cancela cobrando solo los dias que ha estado
+        if ($estancia->esActiva()) {
+            $estancia->aplicarCancelacionActiva();
+
+            $estancia->cancelar('admin');
+
+            return back()->with('success', 'Estancia cancelada. Se cobrará solo el tiempo que ha estado en la residencia.');
+        }
+
+        return back()->with('error', 'No se pudo cancelar la estancia.');
     }
 }

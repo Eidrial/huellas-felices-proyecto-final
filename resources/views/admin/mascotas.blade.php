@@ -1,101 +1,394 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="max-w-5xl mx-auto px-4">
-        <h2 class="text-2xl font-bold mb-6 text-center">Gestión de mascotas</h2>
+    <div class="max-w-7xl mx-auto px-4 py-8">
 
-        <div class="overflow-x-auto">
-            <table class="w-full bg-white shadow rounded overflow-hidden text-center">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="p-3">Foto</th>
-                        <th class="p-3">Nombre</th>
-                        <th class="p-3">Especie</th>
-                        <th class="p-3">Dueño</th>
-                        <th class="p-3">Estado</th>
-                        <th class="p-3">Acciones</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @php
-                        //array para el estado de la mascota
-                        //"pendiente" = pendiente, 1 = aprobada, 0 = no aprobada
-                        //texto que se mostrara y el color correspondiente
-                        $estados = [
-                            'pendiente' => ['texto' => 'Pendiente', 'color' => 'text-yellow-600'],
-                            1 => ['texto' => 'Aprobada', 'color' => 'text-green-600'],
-                            0 => ['texto' => 'No aprobada', 'color' => 'text-red-600'],
-                        ];
-                    @endphp
-
-                    @foreach($mascotas as $mascota)
-                        @php
-                            //determinar el estado de cada mascota individualmente
-                            //si "aprobado" es null, la mascota esta pendiente
-                            //usamos "===" para asegurar que null se detecta correctamente, sino, puede dar errores
-                            $estado = $mascota->aprobado === null ? 'pendiente' : $mascota->aprobado;
-                        @endphp
-
-                        <tr class="border-t hover:bg-gray-50">
-                            <!-- foto de la mascota -->
-                            <td class="p-3">
-                                @if($mascota->foto)
-                                    <img src="{{ asset('storage/' . $mascota->foto) }}" alt="Foto de {{ $mascota->nombre }}"
-                                        class="w-16 h-16 object-cover rounded mx-auto">
-                                @else
-                                    <div class="w-16 h-16 bg-gray-200 flex items-center justify-center rounded text-gray-500">
-                                        🐾 <!-- no hay foto -->
-                                    </div>
-                                @endif
-                            </td>
-
-                            <td class="p-3">{{ $mascota->nombre }}</td>
-                            <td class="p-3">{{ $mascota->especie }}</td>
-                            <td class="p-3">{{ $mascota->dueno->name ?? '—' }}</td>
-
-                            <!-- estado de la mascota (pendiente, aprobada, no aprobada) -->
-                            <td class="p-3">
-                                <!-- muestra el estado con color correspondiente -->
-                                <span id="estado-{{ $mascota->id }}" class="{{ $estados[$estado]['color'] }}">
-                                    {{ $estados[$estado]['texto'] }}
-                                </span>
-
-                                @if($mascota->aprobado === null)
-                                    <div class="inline-flex gap-1 ml-2">
-                                        <!-- aprobar mascota -->
-                                        <button type="button" data-id="{{ $mascota->id }}" data-valor="1"
-                                            class="aprobar-btn px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700">
-                                            Aprobar
-                                        </button>
-
-                                        <!-- no aprobar -->
-                                        <button type="button" data-id="{{ $mascota->id }}" data-valor="0"
-                                            class="aprobar-btn px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700">
-                                            No aprobar
-                                        </button>
-                                    </div>
-                                @endif
-                            </td>
-
-                            <!-- acciones posibles -->
-                            <td class="p-3 flex gap-2 justify-center flex-wrap">
-                                <!-- editar -->
-                                <a href="{{ route('admin.mascotas.editar', $mascota) }}"
-                                    class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-                                    editar
-                                </a>
-
-                                <!-- eliminar -->
-                                <button type="button" class="btn-eliminar-mascota-admin bg-red-600 text-white px-2 py-1 rounded"
-                                    data-id="{{ $mascota->id }}" data-nombre="{{ $mascota->nombre }}">
-                                    eliminar
-                                </button>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <!-- cabecera -->
+        <div class="relative bg-[#2d5a27] rounded-2xl overflow-hidden mb-6 px-7 py-8">
+            <div class="absolute right-6 top-4 text-[4rem] opacity-[0.07] select-none leading-none">🐾</div>
+            <p class="text-xs uppercase tracking-[0.2em] text-[#9fcf8e] font-medium mb-2">
+                {{ auth()->user()->role == 'admin' ? 'Administración' : 'Panel cuidador' }}
+            </p>
+            <h2 class="font-serif text-3xl font-medium text-[#f0ede6]">
+                {{ auth()->user()->role == 'admin' ? 'Gestión de mascotas' : 'Mascotas' }}
+            </h2>
         </div>
+
+        <!-- vista escritorio (tabla) -->
+        <div class="hidden lg:block bg-white border border-[#d9ddd0] rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-[#e8e5de]">
+                            <th
+                                class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider w-14">
+                            </th>
+                            <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">
+                                Mascota</th>
+                            <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">
+                                Dueño</th>
+                            <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">
+                                Estado</th>
+                            <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">
+                                Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-[#f0ede6]">
+                        @foreach($mascotas as $mascota)
+                            @php
+                                //estado visual reutilizable desde el modelo
+                                $estadoVisual = $mascota->getEstadoVisual();
+
+                                $tieneEstancia = $mascota->estancias
+                                    ->whereIn('estado', ['pendiente', 'confirmada', 'activa'])
+                                    ->count() > 0;
+                            @endphp
+
+                            <tr class="hover:bg-[#fafaf8] transition-colors duration-150">
+
+                                <!-- foto de la mascota-->
+                                <td class="px-5 py-3.5">
+                                    @if($mascota->foto)
+                                        <img src="{{ asset('storage/' . $mascota->foto) }}" alt="{{ $mascota->nombre }}"
+                                            class="w-10 h-10 object-cover rounded-xl border border-[#d9ddd0]">
+                                    @else
+                                        <div
+                                            class="w-10 h-10 bg-[#eef5e8] border border-[#c8d9be] rounded-xl flex items-center justify-center text-base">
+                                            🐾
+                                        </div>
+                                    @endif
+                                </td>
+
+                                <!-- nombre + especie/raza -->
+                                <td class="px-5 py-3.5">
+                                    <p class="font-medium text-[#1e2e1a]">{{ $mascota->nombre }}</p>
+                                    <p class="text-xs text-[#8a8e84] mt-0.5">
+                                        {{ ucfirst($mascota->especie) }} · {{ $mascota->raza }}
+                                    </p>
+                                </td>
+
+                                <!-- dueño -->
+                                <td class="px-5 py-3.5 text-[#1e2e1a]">
+                                    {{ $mascota->dueno->name ?? '—' }}
+                                </td>
+
+                                <!-- estado de la mascota (pendiente, aprobada, no aprobada) -->
+                                <td class="px-5 py-3.5">
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+
+                                        <!-- punto del estado -->
+                                        <span id="punto-{{ $mascota->id }}"
+                                            class="w-1.5 h-1.5 rounded-full shrink-0 {{ $estadoVisual['punto'] }}"></span>
+
+                                        <!-- texto del estado -->
+                                        <span id="estado-{{ $mascota->id }}"
+                                            class="text-sm {{ $estadoVisual['etiqueta'] ?? '' }}">
+                                            {{ $estadoVisual['texto'] }}
+                                        </span>
+                                    </div>
+
+                                    @if(auth()->user()->role == 'admin' && $mascota->aprobado === null)
+                                        <div class="flex gap-1.5 mt-2">
+
+                                            <!-- aprobar mascota -->
+                                            <button type="button" data-id="{{ $mascota->id }}" data-valor="1"
+                                                data-nombre="{{ $mascota->nombre }}"
+                                                class="aprobar-btn text-xs px-2.5 py-1 rounded-lg bg-[#eef5e8] text-[#2d5a27] border border-[#b0cc9e] hover:bg-[#ddf0d0] transition-colors duration-200">
+                                                Aprobar
+                                            </button>
+
+                                            <!-- no aprobar -->
+                                            <button type="button" data-id="{{ $mascota->id }}" data-valor="0"
+                                                data-nombre="{{ $mascota->nombre }}"
+                                                class="aprobar-btn text-xs px-2.5 py-1 rounded-lg bg-[#fceaea] text-[#9b2a2a] border border-[#e8b4b4] hover:bg-[#f5d0d0] transition-colors duration-200">
+                                                No aprobar
+                                            </button>
+
+                                        </div>
+                                    @endif
+                                </td>
+
+                                <!-- acciones posibles -->
+                                <td class="px-5 py-3.5">
+                                    <div class="flex gap-1.5 flex-wrap">
+
+                                        @if(auth()->user()->role == 'admin')
+                                            <!-- editar -->
+                                            <a href="{{ route('admin.mascotas.editar', $mascota) }}"
+                                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                                Editar
+                                            </a>
+
+                                            <!-- eliminar -->
+                                            @if($tieneEstancia)
+                                                <button disabled
+                                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#e8e5de] text-[#c0bdb8] cursor-not-allowed">
+                                                    Borrar
+                                                </button>
+                                            @else
+                                                <button type="button"
+                                                    class="btn-eliminar-mascota-admin text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
+                                                    data-id="{{ $mascota->id }}" data-nombre="{{ $mascota->nombre }}">
+                                                    Borrar
+                                                </button>
+                                            @endif
+                                      @else
+                                            <a href="{{ route('cuidador.mascotas.show', $mascota) }}"
+                                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                                Ver ficha
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
+
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- vista tablet -->
+        <div class="hidden md:grid lg:hidden grid-cols-2 gap-4">
+            @foreach($mascotas as $mascota)
+                @php
+                    //estado visual reutilizable desde el modelo
+                    $estadoVisual = $mascota->getEstadoVisual();
+
+                    $tieneEstancia = $mascota->estancias
+                        ->whereIn('estado', ['pendiente', 'confirmada', 'activa'])
+                        ->count() > 0;
+                @endphp
+
+                <div class="bg-white border border-[#d9ddd0] rounded-2xl overflow-hidden h-full flex flex-col">
+                    <div class="p-5 flex-1">
+
+                        <div class="flex items-start gap-3 mb-4">
+
+                            <!-- foto de la mascota-->
+                            @if($mascota->foto)
+                                <img src="{{ asset('storage/' . $mascota->foto) }}" alt="{{ $mascota->nombre }}"
+                                    class="w-14 h-14 object-cover rounded-xl border border-[#d9ddd0] shrink-0">
+                            @else
+                                <div
+                                    class="w-14 h-14 bg-[#eef5e8] border border-[#c8d9be] rounded-xl flex items-center justify-center text-xl shrink-0">
+                                    🐾
+                                </div>
+                            @endif
+
+                            <!-- nombre + especie/raza -->
+                            <div class="min-w-0">
+                                <p class="font-medium text-[#1e2e1a] truncate">{{ $mascota->nombre }}</p>
+                                <p class="text-xs text-[#8a8e84] mt-0.5">
+                                    {{ ucfirst($mascota->especie) }} · {{ $mascota->raza }}
+                                </p>
+                                <p class="text-xs text-[#8a8e84] mt-1">
+                                    Dueño: {{ $mascota->dueno->name ?? '—' }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- estado de la mascota (pendiente, aprobada, no aprobada) -->
+                        <div class="border-t border-[#f0ede6] pt-3">
+                            <div class="flex items-center gap-1.5 mb-0.5">
+
+                                <!-- punto del estado -->
+                                <span id="punto-{{ $mascota->id }}"
+                                    class="w-1.5 h-1.5 rounded-full shrink-0 {{ $estadoVisual['punto'] }}"></span>
+
+                                <!-- texto del estado -->
+                                <span id="estado-{{ $mascota->id }}"
+                                    class="text-sm {{ $estadoVisual['etiqueta'] ?? '' }}">
+                                    {{ $estadoVisual['texto'] }}
+                                </span>
+                            </div>
+
+                            @if(auth()->user()->role == 'admin' && $mascota->aprobado === null)
+                                <div class="flex gap-1.5 mt-2">
+
+                                    <!-- aprobar mascota -->
+                                    <button type="button" data-id="{{ $mascota->id }}" data-valor="1"
+                                        data-nombre="{{ $mascota->nombre }}"
+                                        class="aprobar-btn text-xs px-2.5 py-1 rounded-lg bg-[#eef5e8] text-[#2d5a27] border border-[#b0cc9e] hover:bg-[#ddf0d0] transition-colors duration-200">
+                                        Aprobar
+                                    </button>
+
+                                    <!-- no aprobar -->
+                                    <button type="button" data-id="{{ $mascota->id }}" data-valor="0"
+                                        data-nombre="{{ $mascota->nombre }}"
+                                        class="aprobar-btn text-xs px-2.5 py-1 rounded-lg bg-[#fceaea] text-[#9b2a2a] border border-[#e8b4b4] hover:bg-[#f5d0d0] transition-colors duration-200">
+                                        No aprobar
+                                    </button>
+
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- acciones posibles -->
+                    <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3 flex gap-2 flex-wrap">
+
+                        @if(auth()->user()->role == 'admin')
+                            <!-- editar -->
+                            <a href="{{ route('admin.mascotas.editar', $mascota) }}"
+                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                Editar
+                            </a>
+
+                            <!-- eliminar -->
+                            @if($tieneEstancia)
+                                <button disabled
+                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#e8e5de] text-[#c0bdb8] cursor-not-allowed">
+                                    Borrar
+                                </button>
+                            @else
+                                <button type="button"
+                                    class="btn-eliminar-mascota-admin text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
+                                    data-id="{{ $mascota->id }}" data-nombre="{{ $mascota->nombre }}">
+                                    Borrar
+                                </button>
+                            @endif
+                        @else
+                            @if(Route::has('mascotas.show'))
+                                <a href="{{ route('mascotas.show', $mascota) }}"
+                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                    Ver ficha
+                                </a>
+                            @else
+                                <span class="text-xs px-3 py-1.5 rounded-lg border border-[#e8e5de] text-[#8a8e84]">
+                                    Solo consulta
+                                </span>
+                            @endif
+                        @endif
+
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <!-- vista movil -->
+        <div class="md:hidden space-y-3">
+            @foreach($mascotas as $mascota)
+                @php
+                    //estado visual reutilizable desde el modelo
+                    $estadoVisual = $mascota->getEstadoVisual();
+
+                    $tieneEstancia = $mascota->estancias
+                        ->whereIn('estado', ['pendiente', 'confirmada', 'activa'])
+                        ->count() > 0;
+                @endphp
+
+                <div class="bg-white border border-[#d9ddd0] rounded-2xl overflow-hidden">
+                    <div class="p-4">
+
+                        <div class="flex items-start gap-3 mb-4">
+
+                            <!-- foto de la mascota-->
+                            @if($mascota->foto)
+                                <img src="{{ asset('storage/' . $mascota->foto) }}" alt="{{ $mascota->nombre }}"
+                                    class="w-12 h-12 object-cover rounded-xl border border-[#d9ddd0] shrink-0">
+                            @else
+                                <div
+                                    class="w-12 h-12 bg-[#eef5e8] border border-[#c8d9be] rounded-xl flex items-center justify-center text-lg shrink-0">
+                                    🐾
+                                </div>
+                            @endif
+
+                            <!-- nombre + especie/raza -->
+                            <div class="min-w-0">
+                                <p class="font-medium text-[#1e2e1a]">{{ $mascota->nombre }}</p>
+                                <p class="text-xs text-[#8a8e84] mt-0.5">
+                                    {{ ucfirst($mascota->especie) }} · {{ $mascota->raza }}
+                                </p>
+                                <p class="text-xs text-[#8a8e84] mt-1">
+                                    Dueño: {{ $mascota->dueno->name ?? '—' }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- estado de la mascota (pendiente, aprobada, no aprobada) -->
+                        <div class="border-t border-[#f0ede6] pt-3">
+                            <div class="flex items-center gap-1.5 mb-0.5">
+
+                                <!-- punto del estado -->
+                                <span id="punto-{{ $mascota->id }}"
+                                    class="w-1.5 h-1.5 rounded-full shrink-0 {{ $estadoVisual['punto'] }}"></span>
+
+                                <!-- texto del estado -->
+                                <span id="estado-{{ $mascota->id }}"
+                                    class="text-sm {{ $estadoVisual['etiqueta'] ?? '' }}">
+                                    {{ $estadoVisual['texto'] }}
+                                </span>
+                            </div>
+
+                            @if(auth()->user()->role == 'admin' && $mascota->aprobado === null)
+                                <div class="flex gap-1.5 mt-2">
+
+                                    <!-- aprobar mascota -->
+                                    <button type="button" data-id="{{ $mascota->id }}" data-valor="1"
+                                        data-nombre="{{ $mascota->nombre }}"
+                                        class="aprobar-btn text-xs px-2.5 py-1 rounded-lg bg-[#eef5e8] text-[#2d5a27] border border-[#b0cc9e] hover:bg-[#ddf0d0] transition-colors duration-200">
+                                        Aprobar
+                                    </button>
+
+                                    <!-- no aprobar -->
+                                    <button type="button" data-id="{{ $mascota->id }}" data-valor="0"
+                                        data-nombre="{{ $mascota->nombre }}"
+                                        class="aprobar-btn text-xs px-2.5 py-1 rounded-lg bg-[#fceaea] text-[#9b2a2a] border border-[#e8b4b4] hover:bg-[#f5d0d0] transition-colors duration-200">
+                                        No aprobar
+                                    </button>
+
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- acciones posibles -->
+                    <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3 flex gap-2 flex-wrap">
+
+                        @if(auth()->user()->role == 'admin')
+                            <!-- editar -->
+                            <a href="{{ route('admin.mascotas.editar', $mascota) }}"
+                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                Editar
+                            </a>
+
+                            <!-- eliminar -->
+                            @if($tieneEstancia)
+                                <button disabled
+                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#e8e5de] text-[#c0bdb8] cursor-not-allowed">
+                                    Borrar
+                                </button>
+                            @else
+                                <button type="button"
+                                    class="btn-eliminar-mascota-admin text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
+                                    data-id="{{ $mascota->id }}" data-nombre="{{ $mascota->nombre }}">
+                                    Borrar
+                                </button>
+                            @endif
+                        @else
+                            @if(Route::has('mascotas.show'))
+                                <a href="{{ route('mascotas.show', $mascota) }}"
+                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                    Ver ficha
+                                </a>
+                            @else
+                                <span class="text-xs px-3 py-1.5 rounded-lg border border-[#e8e5de] text-[#8a8e84]">
+                                    Solo consulta
+                                </span>
+                            @endif
+                        @endif
+
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <!-- paginacion -->
+        <div class="mt-8">
+            {{ $mascotas->links() }}
+        </div>
+
     </div>
 @endsection

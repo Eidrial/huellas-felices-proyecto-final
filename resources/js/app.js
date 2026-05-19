@@ -7,6 +7,46 @@ window.Alpine = Alpine;
 Alpine.start();
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    //MENU HAMBURGUESA GLOBAL
+    //?. evita error si el nav no existe en alguna pag
+    document.getElementById('boton-menu')?.addEventListener('click', function () {
+        document.getElementById('menu-movil').classList.toggle('hidden');
+    });
+
+    //mostrar y ocultar la contraseña al pulsar el icono
+    window.mostrarContra = function (inputId, abiertoId, cerradoId) {
+        //obtener el input de contra
+        const input = document.getElementById(inputId);
+        //obtener los iconos (ojo abierto y cerrado)
+        const abierto = document.getElementById(abiertoId);
+        const cerrado = document.getElementById(cerradoId);
+
+        //si no existe el input, salir para evitar errores
+        if (!input) {
+            return;
+        }
+
+        //si la contra esta oculta
+        if (input.type === 'password') {
+            //mostrar la contraseña
+            input.type = 'text';
+            //cambiar iconos -> ocultar ojo abierto y mostrar cerrado
+            if (abierto && cerrado) {
+                abierto.classList.add('hidden');
+                cerrado.classList.remove('hidden');
+            }
+        } else {
+            //ocultar la contraseña
+            input.type = 'password';
+            //cambiar iconos -> mostrar ojo abierto y ocultar cerrado
+            if (abierto && cerrado) {
+                abierto.classList.remove('hidden');
+                cerrado.classList.add('hidden');
+            }
+        }
+    }
+
     //helpers globales (modal + mensaje + ajax)
 
     //MENSAJE GLOBAL AJAX
@@ -18,7 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mensajeAjax) {
             mensajeAjax.textContent = msg;
             mensajeAjax.classList.remove('hidden');
-            mensajeAjax.className = `p-3 mb-4 rounded text-center font-semibold ${esError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+            mensajeAjax.className = `mensaje-sesion p-3 mb-4 rounded-xl text-center text-sm ${esError
+                ? 'bg-red-100 text-red-700'
+                : 'bg-[#eef5e8] text-[#2d5a27]'
+                }`;
             //ocultar mensaje despues de 4 segundos
             setTimeout(() => mensajeAjax.classList.add('hidden'), 4000);
         }
@@ -76,6 +119,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
 
+    //PERFIL !
+    //REENVIAR VERIFICACIÓN EMAIL
+    const btnReenviarVerificacion = document.getElementById('btn-reenviar-verificacion');
+    const formVerificacion = document.getElementById('send-verification');
+
+    if (btnReenviarVerificacion && formVerificacion) {
+        btnReenviarVerificacion.addEventListener('click', function () {
+            if (window.abrirModal) {
+                window.abrirModal(
+                    'Reenviar correo',
+                    '¿Quieres reenviar el correo de verificación? Puede tardar unos minutos en llegar.',
+                    function () {
+                        formVerificacion.submit();
+                    }
+                );
+            }
+        });
+    }
+
+    //ELIMINAR CUENTA
+    const btnEliminarCuenta = document.getElementById('btn-eliminar-cuenta');
+    const formEliminarCuenta = document.getElementById('form-eliminar-cuenta');
+
+    if (btnEliminarCuenta && formEliminarCuenta) {
+        btnEliminarCuenta.addEventListener('click', function () {
+
+            window.abrirModal(
+                'Eliminar cuenta',
+                '¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.',
+                function () {
+                    formEliminarCuenta.submit();
+                }
+            );
+
+        });
+    }
+
     //ocultar mensajes normales (sesion) despues de 4 segundos (para que sea igual que los que usan ajax)
     const mensajesSession = document.querySelectorAll('.mensaje-sesion');
 
@@ -84,6 +164,20 @@ document.addEventListener('DOMContentLoaded', () => {
             msg.classList.add('hidden');
         }, 4000);
     });
+
+    // MOSTRAR NOMBRE DEL ARCHIVO DE FOTO
+    const inputFoto = document.getElementById('foto');
+    const nombreArchivo = document.getElementById('nombre-archivo');
+
+    if (inputFoto && nombreArchivo) {
+        inputFoto.addEventListener('change', function () {
+            if (this.files.length > 0) {
+                nombreArchivo.textContent = this.files[0].name;
+            } else {
+                nombreArchivo.textContent = 'Ningún archivo seleccionado';
+            }
+        });
+    }
 
     //FUNCIÓN AJAX BASE
     window.ajax = function (url, method, data, onSuccess) {
@@ -111,4 +205,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
             });
     };
+
 });

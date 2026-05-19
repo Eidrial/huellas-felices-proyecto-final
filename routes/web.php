@@ -21,7 +21,7 @@ Route::get('/dashboard', function () {
     }
 
     if ($user->role === 'cuidador') {
-        return redirect()->route('cuidados.index');
+        return redirect()->route('cuidador.estancias');
     }
 
     return redirect()->route('mascotas.index');
@@ -32,6 +32,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+//ayuda
+Route::view('/ayuda', 'ayuda')->name('ayuda');
 
 Route::middleware(['auth', 'role:usuario'])->group(function () {
     //ruta para que un usuario vea sus mascotas, necesario estar logueado
@@ -62,14 +65,6 @@ Route::middleware(['auth', 'role:usuario'])->group(function () {
     Route::put('/estancias/{estancia}', [EstanciaController::class, 'update'])->name('estancias.update');
     //cancelar estancia
     Route::put('/estancias/{estancia}/cancelar', [EstanciaController::class, 'cancelar'])->name('estancias.cancelar');
-    //factura de estancia
-    Route::get('/estancias/{estancia}/factura', [EstanciaController::class, 'factura'])->name('estancias.factura');
-
-    //historial de cuidados de una estancia
-    Route::get('/estancias/{estancia}/historial', [EstanciaController::class, 'historial'])->name('estancias.historial');
-
-    //ver avisos
-    Route::get('/estancias/{estancia}/avisos', [EstanciaController::class, 'avisos'])->name('estancias.avisos');
 });
 
 //necesario estar logueado como admin
@@ -135,5 +130,26 @@ Route::middleware(['auth', 'role:admin,cuidador'])->group(function () {
     //crear aviso
     Route::post('/avisos', [AvisoController::class, 'store'])->name('avisos.store');
 });
+
+//necesario estar logueado como cuidador
+Route::middleware(['auth', 'role:cuidador'])->prefix('cuidador')->group(function () {
+    //listado de estancias para cuidador
+    Route::get('/estancias', [CuidadosController::class, 'estancias'])->name('cuidador.estancias');
+    //ver mascotas
+    Route::get('/cuidador/mascotas', [CuidadosController::class, 'mascotas'])->name('cuidador.mascotas');
+    //ver ficha
+    Route::get('/mascotas/{mascota}', [CuidadosController::class, 'showMascota'])->name('cuidador.mascotas.show');
+});
+
+//rutas compartidas entre usuario, admin y cuidador
+Route::middleware(['auth', 'role:usuario,admin,cuidador'])->group(function () {
+    //factura
+    Route::get('/estancias/{estancia}/factura', [EstanciaController::class, 'factura'])->name('estancias.factura');
+    //historial
+    Route::get('/estancias/{estancia}/historial', [EstanciaController::class, 'historial'])->name('estancias.historial');
+    //avisos
+    Route::get('/estancias/{estancia}/avisos', [EstanciaController::class, 'avisos'])->name('estancias.avisos');
+});
+
 
 require __DIR__ . '/auth.php';

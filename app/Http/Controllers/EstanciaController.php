@@ -13,16 +13,57 @@ use App\Mail\EstanciaConfirmadaMail;
 class EstanciaController extends Controller
 {
     //listado de estancias del usuario logueado
-    public function index()
+    public function index(Request $request)
     {
-        $estancias = Auth::user()->estancias()->with('mascota')->orderBy('fecha_entrada', 'desc')->get();
+        //cancelar automaticamente pendientes y sin disponibilidad caducadas sin cobrar
+        Estancia::cancelarCaducadasSinCobro();
+
+        $vista = $request->get('vista', 'abiertas');
+
+        //totales para las pestañas
+        $totalAbiertas = Auth::user()->estancias()
+            ->whereIn('estado', [
+                'pendiente',
+                'confirmada',
+                'activa',
+                'sin_disponibilidad'
+            ])
+            ->count();
+
+        $totalHistorial = Auth::user()->estancias()
+            ->whereIn('estado', [
+                'finalizada',
+                'cancelada'
+            ])
+            ->count();
+
+        //consulta base con mascota
+        $consulta = Auth::user()->estancias()->with('mascota');
+
+        //filtrar segun la pestaña
+        if ($vista === 'historial') {
+            $consulta->whereIn('estado', ['finalizada', 'cancelada']);
+        } else {
+            $consulta->whereIn('estado', [
+                'pendiente',
+                'confirmada',
+                'activa',
+                'sin_disponibilidad'
+            ]);
+        }
+
+        //ordenar y paginar solo las estancias de esa pestaña (usuario)
+        $estancias = $consulta
+            ->orderBy('fecha_entrada', 'desc')
+            ->paginate(6)
+            ->appends(['vista' => $vista]);
 
         $pendientesHoy = [];
 
         $hoy = date('Y-m-d');
 
         //filtrar solo estancias activas para calcular cuidados pendientes de hoy
-        $estanciasActivas = $estancias->where('estado', 'activa');
+        $estanciasActivas = $estancias->getCollection()->where('estado', 'activa');
 
         foreach ($estanciasActivas as $estancia) {
 
@@ -33,7 +74,13 @@ class EstanciaController extends Controller
                 ->count();
         }
 
-        return view('estancias.index', compact('estancias', 'pendientesHoy'));
+        return view('estancias.index', compact(
+            'estancias',
+            'pendientesHoy',
+            'vista',
+            'totalAbiertas',
+            'totalHistorial'
+        ));
     }
 
     //formulario para crear nueva estancia
@@ -41,6 +88,7 @@ class EstanciaController extends Controller
     {
         //incluye pendientes
         $mascotas = Auth::user()->mascotas()->get();
+
         return view('estancias.create', compact('mascotas'));
     }
 
@@ -62,6 +110,14 @@ class EstanciaController extends Controller
             ])->withInput(); //devolver al formulario manteniendo los datos que el usuario ya habia escrito
         }
 
+        //comprobar que el usuario tiene sus datos personales completos antes de reservar
+        $user = Auth::user();
+
+        if (!$user->apellidos || !$user->dni || !$user->telefono || !$user->direccion) {
+            return redirect()->route('profile.edit')
+                ->with('error', 'Debes completar tus datos personales antes de reservar una estancia.');
+        }
+
         $mascota = Mascota::find($request->mascota_id);
 
         if (!$mascota) {
@@ -77,7 +133,9 @@ class EstanciaController extends Controller
         $maxPendientes = config('residencia.max_estancias_por_mascota');
 
         //solo contaran para el maximo las pendientes y las confirmadas, las activas no
-        $abiertas = Estancia::where('mascota_id', $mascota->id)->whereIn('estado', ['pendiente', 'confirmada'])->count();
+        $abiertas = Estancia::where('mascota_id', $mascota->id)
+            ->whereIn('estado', ['pendiente', 'confirmada'])
+            ->count();
 
         if ($abiertas >= $maxPendientes) {
             return back()->with('error', 'Esta mascota ya tiene el máximo de estancias pendientes/confirmadas.');
@@ -113,7 +171,9 @@ class EstanciaController extends Controller
         }
 
         //comprobar si coincide con otra estancia de la misma mascota
-        $otrasEstancias = Estancia::where('mascota_id', $mascota->id)->whereIn('estado', ['pendiente', 'confirmada', 'activa'])->get();
+        $otrasEstancias = Estancia::where('mascota_id', $mascota->id)
+            ->whereIn('estado', ['pendiente', 'confirmada', 'activa'])
+            ->get();
 
         $hayConflicto = false;
 
@@ -128,11 +188,12 @@ class EstanciaController extends Controller
             return back()->with('error', 'Esta mascota ya tiene otra estancia entre estas fechas.');
         }
 
-        //estado por defecto
-        $estado = 'pendiente';
-
-        //si la mascota esta aprobada, intentar confirmar srgun disponibilidad
-        if ($mascota->aprobado == 1 && Estancia::hayDisponibilidad($request->fecha_entrada, $request->fecha_salida)) {
+        //estado segun aprobacion de mascota y disponibilidad
+        if ($mascota->aprobado != 1) {
+            $estado = 'pendiente';
+        } elseif (!Estancia::hayDisponibilidad($request->fecha_entrada, $request->fecha_salida)) {
+            $estado = 'sin_disponibilidad';
+        } else {
             $estado = 'confirmada';
         }
 
@@ -165,15 +226,18 @@ class EstanciaController extends Controller
             }
         }
 
+        if ($estancia->estado == 'sin_disponibilidad') {
+            return redirect()->route('estancias.index')->with('warning', 'Estancia creada, pero no hay plazas disponibles para esas fechas.');
+        }
+
         return redirect()->route('estancias.index')->with('success', 'Estancia creada correctamente. Recuerda que se paga el primer día.');
     }
 
     //mostrar factura de estancia
     public function factura(Estancia $estancia)
     {
-        //solo el dueño puede verla
-        if ($estancia->mascota->dueno_id != Auth::id()) {
-            return redirect()->route('estancias.index')->with('error', 'No puedes ver esta estancia.');
+        if (!$this->puedeVerEstancia($estancia)) {
+            return redirect()->route('home')->with('error', 'No puedes ver esta estancia.');
         }
 
         return view('estancias.factura', compact('estancia'));
@@ -193,7 +257,6 @@ class EstanciaController extends Controller
     //actualizar estancia (acortar o ampliar si hay espacio)
     public function update(Request $request, Estancia $estancia)
     {
-
         //saber que la estancia es del usuario
         if ($estancia->mascota->dueno_id != Auth::id()) {
             return redirect()->route('estancias.index')->with('error', 'No puedes actualizar esta estancia.');
@@ -222,6 +285,27 @@ class EstanciaController extends Controller
             return back()->with('error', 'No se permiten salidas en domingo.');
         }
 
+        //si estaba sin disponibilidad, al cambiar fecha se vuelve a comprobar disponibilidad
+        if ($estancia->esSinDisponibilidad()) {
+
+            $estancia->fecha_salida = $request->fecha_salida;
+
+            if (Estancia::hayDisponibilidad($estancia->fecha_entrada, $request->fecha_salida, $estancia->id)) {
+                $estancia->estado = 'confirmada';
+            } else {
+                $estancia->estado = 'sin_disponibilidad';
+            }
+
+            $estancia->calcularPrecioTotal();
+            $estancia->save();
+
+            if ($estancia->estado == 'confirmada') {
+                return redirect()->route('estancias.index')->with('success', 'Estancia actualizada correctamente. Ahora hay disponibilidad y queda confirmada.');
+            }
+
+            return redirect()->route('estancias.index')->with('error', 'Estancia actualizada, pero sigue sin haber plazas disponibles para esas fechas.');
+        }
+
         //al ampliar debe haber disponibilidad
         if (!$estancia->puedeAmpliarse($request->fecha_salida)) {
             return back()->with('error', 'No se puede ampliar la estancia, no hay disponibilidad.');
@@ -244,9 +328,19 @@ class EstanciaController extends Controller
 
         $hoy = date('Y-m-d');
 
+        $entrada = date('Y-m-d', strtotime($estancia->fecha_entrada));
+
+        //sin disponibilidad = cancelable y sin cobrar
+        if ($estancia->estado == 'sin_disponibilidad') {
+            $estancia->cancelarSinCobro('usuario');
+
+            return redirect()->route('estancias.index')->with('success', 'Estancia cancelada correctamente.');
+        }
+
         //pendiente = siempre cancelable y sin penalizar
         if ($estancia->estado == 'pendiente') {
-            $estancia->cancelar('usuario');
+            $estancia->cancelarSinCobro('usuario');
+
             return redirect()->route('estancias.index')->with('success', 'Estancia cancelada correctamente.');
         }
 
@@ -254,9 +348,8 @@ class EstanciaController extends Controller
         if ($estancia->estado == 'confirmada') {
 
             //si cancela el mismo dia de entrada, se cobra 1 dia
-            if ($hoy == $estancia->fecha_entrada) {
-                $estancia->precio_total = $estancia->precio_dia;
-                $estancia->save();
+            if ($hoy == $entrada) {
+                $estancia->aplicarCancelacionUnDia();
 
                 $estancia->cancelar('usuario');
 
@@ -264,8 +357,9 @@ class EstanciaController extends Controller
             }
 
             //si es antes del dia de entrada, se cancela normal, sin penalizar
-            if ($hoy < $estancia->fecha_entrada) {
-                $estancia->cancelar('usuario');
+            if ($hoy < $entrada) {
+                $estancia->cancelarSinCobro('usuario');
+
                 return redirect()->route('estancias.index')->with('success', 'Estancia cancelada correctamente.');
             }
 
@@ -273,16 +367,15 @@ class EstanciaController extends Controller
             return redirect()->route('estancias.index')->with('error', 'Ya ha pasado el día de entrada. Contacta con administración.');
         }
 
-        //si no es pendiente ni confirmada, no se puede cancelar
+        //si no es pendiente, confirmada ni sin disponibilidad, no se puede cancelar
         return redirect()->route('estancias.index')->with('error', 'No puedes cancelar esta estancia. Contacta con administración.');
-
     }
 
-    //historial de cuidados para el dueño del animal
+    //historial de cuidados para dueño, admin o cuidador
     public function historial(Estancia $estancia)
     {
-        if (!$estancia->mascota || $estancia->mascota->dueno_id != Auth::id()) {
-            return redirect()->route('estancias.index')->with('error', 'No puedes ver el historial de esta estancia.');
+        if (!$this->puedeVerEstancia($estancia)) {
+            return redirect()->route('home')->with('error', 'No puedes ver el historial de esta estancia.');
         }
 
         $hoy = now()->toDateString();
@@ -344,11 +437,11 @@ class EstanciaController extends Controller
         ));
     }
 
-    //avisos para el dueño (por estancia)
+    //avisos para dueño, admin o cuidador
     public function avisos(Estancia $estancia)
     {
-        if (!$estancia->mascota || $estancia->mascota->dueno_id != Auth::id()) {
-            return redirect()->route('estancias.index')->with('error', 'No puedes ver los avisos de esta estancia.');
+        if (!$this->puedeVerEstancia($estancia)) {
+            return redirect()->route('home')->with('error', 'No puedes ver los avisos de esta estancia.');
         }
 
         $avisos = $estancia->avisos()
@@ -357,5 +450,19 @@ class EstanciaController extends Controller
             ->get();
 
         return view('estancias.avisos', compact('estancia', 'avisos'));
+    }
+
+    //comprobar si el usuario puede ver la estancia
+    private function puedeVerEstancia(Estancia $estancia)
+    {
+        $user = auth()->user();
+
+        //admin y cuidador pueden ver cualquier estancia
+        if (in_array($user->role, ['admin', 'cuidador'])) {
+            return true;
+        }
+
+        //el dueño solo puede ver sus propias estancias
+        return $estancia->mascota && $estancia->mascota->dueno_id == $user->id;
     }
 }

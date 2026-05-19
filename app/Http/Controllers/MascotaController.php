@@ -16,10 +16,21 @@ class MascotaController extends Controller
         $usuario = Auth::user();
 
         //obtener sus mascotas
-        $mascotas = $usuario->mascotas()->with('estancias')->get();
+        $mascotas = $usuario->mascotas()->with('estancias')->orderBy('created_at')->paginate(6);
+
+        $totalMascotas = $usuario->mascotas()->count();
+        $aprobadas = $usuario->mascotas()->where('aprobado', 1)->count();
+        $pendientes = $usuario->mascotas()->whereNull('aprobado')->count();
+        $noAprobadas = $usuario->mascotas()->where('aprobado', 0)->count();
 
         //enviar mascotas a la vista para amostrarlas
-        return view('mascotas.index', compact('mascotas'));
+        return view('mascotas.index', compact(
+            'mascotas',
+            'totalMascotas',
+            'aprobadas',
+            'pendientes',
+            'noAprobadas'
+        ));
     }
 
     //miestra el formulario para añadir una mascota
@@ -33,12 +44,12 @@ class MascotaController extends Controller
     {
         //validación del formulario
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|min:2|max:50',
             'especie' => 'required|in:perro',
-            'raza' => 'required|string|max:255',
-            'edad' => 'required|integer|min:0',
-            'peso' => 'required|numeric|min:0',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+            'raza' => 'required|string|min:2|max:80',
+            'edad' => 'required|integer|min:1|max:25',
+            'peso' => 'required|numeric|min:0.5|max:100',
+            'foto' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
         ]);
 
         $rutaFoto = null;
@@ -93,12 +104,12 @@ class MascotaController extends Controller
 
         //validar
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|min:2|max:50',
             'especie' => 'required|in:perro',
-            'raza' => 'required|string|max:255',
-            'edad' => 'required|integer|min:0',
-            'peso' => 'required|numeric|min:0',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+            'raza' => 'required|string|min:2|max:80',
+            'edad' => 'required|integer|min:1|max:25',
+            'peso' => 'required|numeric|min:0.5|max:100',
+            'foto' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
         ]);
 
         //actualizar
@@ -141,13 +152,18 @@ class MascotaController extends Controller
         //mensaje específico segun el estado de la estancia
         //orderByRaw hace que primero se busquen las estancias activas,
         //luego las confirmadas y por ultimo las pendientes (por orden de importancia)
-        $existeEstancia = Estancia::where('mascota_id', $mascota->id)->whereIn('estado', ['pendiente', 'confirmada', 'activa'])->orderByRaw("FIELD(estado, 'activa', 'confirmada', 'pendiente')")->first();
+        $existeEstancia = Estancia::where('mascota_id', $mascota->id)
+            ->whereIn('estado', ['pendiente', 'confirmada', 'activa', 'sin_disponibilidad'])
+            ->orderByRaw("FIELD(estado, 'activa', 'confirmada', 'pendiente', 'sin_disponibilidad')")
+            ->first();
 
         if ($existeEstancia) {
             if ($existeEstancia->estado == 'pendiente') {
                 $msg = 'No puedes borrar esta mascota porque tiene una estancia pendiente. Cancela la estancia antes de borrarla.';
             } elseif ($existeEstancia->estado == 'confirmada') {
                 $msg = 'No puedes borrar esta mascota porque tiene una estancia confirmada. Cancela la estancia antes de borrarla.';
+            } elseif ($existeEstancia->estado == 'sin_disponibilidad') {
+                $msg = 'No puedes borrar esta mascota porque tiene una estancia sin disponibilidad. Cancela la estancia antes de borrarla.';
             } else { //activa
                 $msg = 'No puedes borrar esta mascota porque tiene una estancia activa. Espera a que finalice la estancia para poder borrarla.';
             }

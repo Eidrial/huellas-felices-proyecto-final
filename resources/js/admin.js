@@ -1,16 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    //MOSTRAR / OCULTAR DATOS PERSONALES SEGUN EL ROL AL CREAR USUARIO
+    const selectorRolCrear = document.getElementById('role');
+    const datosPersonalesCrear = document.getElementById('datos-personales-usuario');
+
+    if (selectorRolCrear && datosPersonalesCrear) {
+
+        //estado inicial
+        if (selectorRolCrear.value === 'admin') {
+            datosPersonalesCrear.classList.add('hidden');
+        }
+
+        //cambio de rol
+        selectorRolCrear.addEventListener('change', function () {
+
+            if (this.value === 'admin') {
+                datosPersonalesCrear.classList.add('hidden');
+            } else {
+                datosPersonalesCrear.classList.remove('hidden');
+            }
+
+        });
+    }
+
     //CAMBIAR ROL DE USUARIO
     //se aplica a todos los select con clase .cambiar-rol
     document.querySelectorAll('.cambiar-rol').forEach(select => {
 
-        let rolAnterior = select.value; //guardar el rol previo por si se cancela
+        //guardar el rol previo por si se cancela
+        let rolAnterior = select.value;
 
         select.addEventListener('change', function () {
             const userId = this.dataset.id;
             const nombre = this.dataset.nombre;
             const nuevoRol = this.value;
-            const fila = this.closest('tr'); //fila de la tabla para actualizar
+
+            //tabla - tarjetas
+            const contenedor = this.closest('tr') || this.closest('[data-id]');
+
 
             //volver al rol anterior si cancela
             window.onModalCancel = () => {
@@ -25,11 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         `/admin/usuarios/${userId}/rol`,
                         'PUT',
                         { role: nuevoRol },
-                        () => {
-                            //actualizar texto en la tabla
-                            //convierte la primera letra en mayus y concatena el resto del texto... ej: U-suario (el - no existiria, es para el ej)
-                            fila.querySelector('.rol-text').textContent =
-                                nuevoRol.charAt(0).toUpperCase() + nuevoRol.slice(1);
+                        (data) => {
+                            const rolEl = contenedor.querySelector('.rol-text');
+
+                            if (rolEl) {
+                                rolEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full shrink-0 ${data.punto}"></span>
+                                <span class="${data.etiqueta} text-sm">${data.texto}</span>`;
+                            }
+
                             rolAnterior = nuevoRol;
                             window.onModalCancel = null;
                             window.mostrarMensaje('Rol actualizado correctamente');
@@ -47,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const userId = this.dataset.id;
             const nombre = this.dataset.nombre;
-            const fila = this.closest('tr');
+            const fila = this.closest('tr') || this.closest('[data-id]');
 
             window.abrirModal(
                 'Eliminar usuario',
@@ -57,9 +87,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         `/admin/usuarios/${userId}`,
                         'DELETE',
                         {},
-                        () => {
-                            fila.remove();  //eliminar fila de la tabla
-                            window.mostrarMensaje('Usuario eliminado correctamente');
+                        (data) => {
+                            if (!data.success) {
+                                window.mostrarMensaje(data.message || 'No se pudo eliminar el usuario', 'error');
+                                return;
+                            }
+
+                            if (fila) {
+                                fila.remove();
+                            }
+
+                            window.mostrarMensaje(data.message || 'Usuario eliminado correctamente');
                         }
                     );
                 }
@@ -85,7 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         'DELETE',
                         {},
                         () => {
-                            fila.remove();
+                            if (fila) {
+                                fila.remove();
+                            }
+
                             window.mostrarMensaje('Mascota eliminada correctamente');
                         }
                     );
@@ -94,22 +135,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    //APROBAR / NO APROBAR MASCOTA (sin modal)
+    //APROBAR / NO APROBAR MASCOTA (con modal)
     document.querySelectorAll('.aprobar-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const mascotaId = this.dataset.id;
             const valor = parseInt(this.dataset.valor); //0 o 1
-            const estadoSpan = document.getElementById(`estado-${mascotaId}`);
+            const nombre = this.dataset.nombre;
+            const estadoTexto = document.getElementById(`estado-${mascotaId}`);
+            const estadoPunto = document.getElementById(`punto-${mascotaId}`);
 
-            //directo sin modal
-            window.ajax(`/admin/mascotas/${mascotaId}/aprobar`, 'PUT', { aprobado: valor }, (data) => {
-                if (data.success) {
-                    estadoSpan.textContent = data.texto; //actualiza texto
-                    estadoSpan.className = data.color; //actualiza color
-                    btn.parentElement.remove(); //quitar botones porque ya no hacen faltas
-                    window.mostrarMensaje(data.message || 'Estado de la mascota actualizado');
+            let titulo = '';
+            let mensaje = '';
+
+            if (valor === 1) {
+                titulo = 'Aprobar mascota';
+                mensaje = `¿Seguro que quieres aprobar a ${nombre}? Si tiene estancias pendientes, se intentarán confirmar automáticamente según disponibilidad.`;
+            } else {
+                titulo = 'No aprobar mascota';
+                mensaje = `¿Seguro que quieres no aprobar a ${nombre}?`;
+            }
+
+            window.abrirModal(
+                titulo,
+                mensaje,
+                () => {
+                    window.ajax(`/admin/mascotas/${mascotaId}/aprobar`, 'PUT', { aprobado: valor }, (data) => {
+                        if (data.success) {
+                            if (estadoTexto) {
+                                estadoTexto.textContent = data.texto; //actualiza texto
+                                estadoTexto.className = `text-sm ${data.etiqueta}`; //actualiza color del texto
+                            }
+
+                            if (estadoPunto) {
+                                estadoPunto.className = `w-1.5 h-1.5 rounded-full shrink-0 ${data.punto}`; //actualiza color del punto
+                            }
+
+                            if (btn.parentElement) {
+                                btn.parentElement.remove(); //quitar botones porque ya no hacen falta
+                            }
+
+                            window.mostrarMensaje(data.message || 'Estado de la mascota actualizado');
+                        }
+                    });
                 }
-            });
+            );
         });
     });
 
