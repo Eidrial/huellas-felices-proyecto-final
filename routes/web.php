@@ -16,6 +16,11 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     $user = auth()->user();
 
+    //asegurar de que el usuario tiene un rol asignado
+    if (!$user || !$user->role) {
+        return redirect()->route('home'); //redigir a la página de inicio
+    }
+
     if ($user->role === 'admin') {
         return redirect()->route('admin.estancias.index');
     }
@@ -129,6 +134,8 @@ Route::middleware(['auth', 'role:admin,cuidador'])->group(function () {
     Route::post('/cuidados', [CuidadosController::class, 'store'])->name('cuidados.store');
     //crear aviso
     Route::post('/avisos', [AvisoController::class, 'store'])->name('avisos.store');
+    //ver ficha
+    Route::get('/staff/mascotas/{mascota}', [CuidadosController::class, 'showMascota'])->name('cuidador.mascotas.show');
 });
 
 //necesario estar logueado como cuidador
@@ -137,8 +144,6 @@ Route::middleware(['auth', 'role:cuidador'])->prefix('cuidador')->group(function
     Route::get('/estancias', [CuidadosController::class, 'estancias'])->name('cuidador.estancias');
     //ver mascotas
     Route::get('/cuidador/mascotas', [CuidadosController::class, 'mascotas'])->name('cuidador.mascotas');
-    //ver ficha
-    Route::get('/mascotas/{mascota}', [CuidadosController::class, 'showMascota'])->name('cuidador.mascotas.show');
 });
 
 //rutas compartidas entre usuario, admin y cuidador

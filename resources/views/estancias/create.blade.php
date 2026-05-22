@@ -56,8 +56,7 @@
 
                     <!-- mascota -->
                     <div>
-                        <label for="mascota_id"
-                            class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                        <label for="mascota_id" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                             Mascota
                         </label>
 
@@ -65,21 +64,27 @@
                             class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                             required>
 
-                            <option value="" selected disabled>
+                            <option value="" selected disabled hidden>
                                 Selecciona una mascota
                             </option>
 
-                            @foreach($mascotas as $mascota)
-                                <option value="{{ $mascota->id }}"
-                                    @selected(old('mascota_id') == $mascota->id)
-                                    @if($mascota->aprobado === 0) disabled @endif>
-
-                                    {{ $mascota->nombre }}
-
-                                    ({{ $mascota->aprobado === 1 ? 'Aprobada' : ($mascota->aprobado === null ? 'Pendiente' : 'No aprobada') }})
-
+                            @if($mascotas->isEmpty())
+                                <option value="" disabled>
+                                    No tienes mascotas registradas
                                 </option>
-                            @endforeach
+                            @else
+                                @foreach($mascotas as $mascota)
+                                    <option value="{{ $mascota->id }}" @selected(old('mascota_id') == $mascota->id)
+                                        @if($mascota->aprobado === 0) disabled @endif>
+
+                                        {{ $mascota->nombre }}
+
+                                        ({{ $mascota->aprobado === 1 ? 'Aprobada' : ($mascota->aprobado === null ? 'Pendiente' : 'No aprobada') }})
+
+                                    </option>
+                                @endforeach
+                            @endif
+
                         </select>
 
                         <p class="text-xs text-[#8a8e84] mt-1.5">
@@ -92,30 +97,22 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                         <div>
-                            <label for="fecha_entrada"
-                                class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                            <label for="fecha_entrada" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                                 Fecha de entrada
                             </label>
 
-                            <input type="date"
-                                id="fecha_entrada"
-                                name="fecha_entrada"
-                                value="{{ old('fecha_entrada') }}"
+                            <input type="date" id="fecha_entrada" name="fecha_entrada" value="{{ old('fecha_entrada') }}"
                                 min="{{ date('Y-m-d', strtotime('+1 day')) }}"
                                 class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                 required>
                         </div>
 
                         <div>
-                            <label for="fecha_salida"
-                                class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                            <label for="fecha_salida" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                                 Fecha de salida
                             </label>
 
-                            <input type="date"
-                                id="fecha_salida"
-                                name="fecha_salida"
-                                value="{{ old('fecha_salida') }}"
+                            <input type="date" id="fecha_salida" name="fecha_salida" value="{{ old('fecha_salida') }}"
                                 class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                 required>
 
@@ -151,9 +148,7 @@
                                     Descripción
                                 </label>
 
-                                <input type="text"
-                                    name="medicacion_descripcion"
-                                    value="{{ old('medicacion_descripcion') }}"
+                                <input type="text" name="medicacion_descripcion" value="{{ old('medicacion_descripcion') }}"
                                     class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                     placeholder="Ej: Pastilla para alergia">
                             </div>
@@ -166,9 +161,7 @@
                                     </span>
                                 </label>
 
-                                <input type="text"
-                                    name="medicacion_horas"
-                                    value="{{ old('medicacion_horas') }}"
+                                <input type="text" name="medicacion_horas" value="{{ old('medicacion_horas') }}"
                                     class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                     placeholder="Ej: 09:00,21:00">
                             </div>
