@@ -36,9 +36,9 @@
                     <label for="email" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                         Correo electrónico
                     </label>
-                    <input id="email" type="email" name="email" value="{{ old('email', request('email')) }}"
-                        class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 md:py-3 text-sm md:text-base text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
-                        placeholder="tu@email.com" required autocomplete="username">
+                    <input id="email" type="email" name="email" value="{{ request('email') }}" readonly
+                        class="w-full border border-[#d9ddd0] bg-[#f0ede6] rounded-xl px-4 py-2.5 md:py-3 text-sm md:text-base text-[#8a8e84] cursor-not-allowed"
+                        autocomplete="username">
                 </div>
 
                 <!-- nueva contrasena -->
@@ -51,9 +51,6 @@
                         <input id="password" type="password" name="password"
                             class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 md:py-3 pr-10 text-sm md:text-base text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                             placeholder="Mínimo 8 caracteres, letras y números" required autocomplete="new-password">
-                        <p class="text-xs text-[#8a8e84] mt-1.5">
-                            Debe tener mínimo 8 caracteres, al menos una letra y un número.
-                        </p>
 
                         <button type="button"
                             onclick="mostrarContra('password', 'ojo-reset1-abierto', 'ojo-reset1-cerrado')"
@@ -77,6 +74,10 @@
                             </svg>
                         </button>
                     </div>
+
+                    <p class="text-xs text-[#8a8e84] mt-1.5">
+                        Debe tener mínimo 8 caracteres, al menos una letra y un número.
+                    </p>
                 </div>
 
                 <!-- confirmar contraseña -->

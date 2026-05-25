@@ -49,7 +49,7 @@ class MascotaController extends Controller
             'raza' => 'required|string|min:2|max:80',
             'edad' => 'required|integer|min:1|max:25',
             'peso' => 'required|numeric|min:0.5|max:100',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'foto' => 'nullable|image|max:3072',
         ]);
 
         $rutaFoto = null;
@@ -109,7 +109,7 @@ class MascotaController extends Controller
             'raza' => 'required|string|min:2|max:80',
             'edad' => 'required|integer|min:1|max:25',
             'peso' => 'required|numeric|min:0.5|max:100',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'foto' => 'nullable|image|max:3072',
         ]);
 
         //actualizar

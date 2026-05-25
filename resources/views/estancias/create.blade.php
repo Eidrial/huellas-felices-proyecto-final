@@ -21,6 +21,11 @@
                 </p>
             </div>
 
+            @php
+                //recuperar reserva si estaba en proceso, y si no, vacía
+                $reservaCurso = $reservaEnCurso ?? [];
+            @endphp
+
             <!-- errores -->
             @if($errors->any())
                 <div class="bg-[#fceaea] text-[#9b2a2a] border border-[#e8b4b4] text-sm p-4 mb-5 rounded-xl">
@@ -42,6 +47,7 @@
                     <li>· Se paga el primer día al entregar el perro.</li>
                     <li>· Las reservas deben hacerse con al menos 1 día de antelación.</li>
                     <li>· No se permiten entradas ni salidas los domingos.</li>
+                    <li>· La entrada y salida se realizan en horario de mañana (antes de las 10:00).</li>
                     <li>· Máximo {{ config('residencia.max_dias_estancia') }} días por estancia.</li>
                     <li>· Mínimo {{ config('residencia.min_dias_estancia') }} días por estancia.</li>
                     <li>· Máximo {{ config('residencia.max_estancias_por_mascota') }} reservas pendientes por mascota.</li>
@@ -74,7 +80,7 @@
                                 </option>
                             @else
                                 @foreach($mascotas as $mascota)
-                                    <option value="{{ $mascota->id }}" @selected(old('mascota_id') == $mascota->id)
+                                    <option value="{{ $mascota->id }}" @selected(old('mascota_id', $reservaCurso['mascota_id'] ?? null) == $mascota->id)
                                         @if($mascota->aprobado === 0) disabled @endif>
 
                                         {{ $mascota->nombre }}
@@ -101,7 +107,7 @@
                                 Fecha de entrada
                             </label>
 
-                            <input type="date" id="fecha_entrada" name="fecha_entrada" value="{{ old('fecha_entrada') }}"
+                            <input type="date" id="fecha_entrada" name="fecha_entrada" value="{{ old('fecha_entrada', $reservaCurso['fecha_entrada'] ?? '') }}"
                                 min="{{ date('Y-m-d', strtotime('+1 day')) }}"
                                 class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                 required>
@@ -112,7 +118,7 @@
                                 Fecha de salida
                             </label>
 
-                            <input type="date" id="fecha_salida" name="fecha_salida" value="{{ old('fecha_salida') }}"
+                            <input type="date" id="fecha_salida" name="fecha_salida" value="{{ old('fecha_salida', $reservaCurso['fecha_salida'] ?? '') }}"
                                 class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                 required>
 
@@ -148,7 +154,7 @@
                                     Descripción
                                 </label>
 
-                                <input type="text" name="medicacion_descripcion" value="{{ old('medicacion_descripcion') }}"
+                                <input type="text" name="medicacion_descripcion" value="{{ old('medicacion_descripcion', $reservaCurso['medicacion_descripcion'] ?? '') }}"
                                     class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                     placeholder="Ej: Pastilla para alergia">
                             </div>
@@ -161,7 +167,7 @@
                                     </span>
                                 </label>
 
-                                <input type="text" name="medicacion_horas" value="{{ old('medicacion_horas') }}"
+                                <input type="text" name="medicacion_horas" value="{{ old('medicacion_horas', $reservaCurso['medicacion_horas'] ?? '') }}"
                                     class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                                     placeholder="Ej: 09:00,21:00">
                             </div>

@@ -33,45 +33,33 @@
         <!-- formulario -->
         <div class="bg-white border border-[#d9ddd0] rounded-2xl p-5 sm:p-7">
 
-            <form method="POST"
-                action="{{ route('mascotas.store') }}"
-                enctype="multipart/form-data"
-                class="space-y-5">
+            <form method="POST" action="{{ route('mascotas.store') }}" enctype="multipart/form-data" class="space-y-5">
 
                 @csrf
 
                 <!-- nombre -->
                 <div>
-                    <label for="nombre"
-                        class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                    <label for="nombre" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                         Nombre
                     </label>
 
                     <!-- old en valor es el campo no se borre en el caso de que haya errores al enviar el formulario,seguirá mostrando lo que envió -->
-                    <input type="text"
-                        id="nombre"
-                        name="nombre"
-                        value="{{ old('nombre') }}"
-                        maxlength="50"
+                    <input type="text" id="nombre" name="nombre" value="{{ old('nombre') }}" maxlength="50"
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
-                        placeholder="Nombre de tu mascota"
-                        required>
+                        placeholder="Nombre de tu mascota" required>
                 </div>
 
                 <!-- especie -->
                 <div>
-                    <label for="especie"
-                        class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                    <label for="especie" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                         Especie
                     </label>
 
-                    <select id="especie"
-                        name="especie"
+                    <select id="especie" name="especie"
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
                         required>
 
-                        <!-- para elegir la especie (solo disponible perro -->
-                        <option value="" selected disabled>
+                        <option value="" disabled {{ old('especie') ? '' : 'selected' }}>
                             Selecciona una especie
                         </option>
 
@@ -79,7 +67,7 @@
                             Gato (no disponible)
                         </option>
 
-                        <option value="perro">
+                        <option value="perro" {{ old('especie') === 'perro' ? 'selected' : '' }}>
                             Perro
                         </option>
 
@@ -88,38 +76,24 @@
 
                 <!-- raza -->
                 <div>
-                    <label for="raza"
-                        class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                    <label for="raza" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                         Raza
                     </label>
 
-                    <input type="text"
-                        id="raza"
-                        name="raza"
-                        value="{{ old('raza') }}"
-                        maxlength="80"
+                    <input type="text" id="raza" name="raza" value="{{ old('raza') }}" maxlength="80"
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
-                        placeholder="Ej: Husky"
-                        required>
+                        placeholder="Ej: Husky" required>
                 </div>
 
                 <!-- edad -->
                 <div>
-                    <label for="edad"
-                        class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                    <label for="edad" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                         Edad (años)
                     </label>
 
-                    <input type="number"
-                        id="edad"
-                        name="edad"
-                        value="{{ old('edad') }}"
-                        min="1"
-                        max="25"
-                        step="1"
+                    <input type="number" id="edad" name="edad" value="{{ old('edad') }}" min="1" max="25" step="1"
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
-                        placeholder="Ej: 2"
-                        required>
+                        placeholder="Ej: 2" required>
                 </div>
 
                 <p class="text-xs text-[#8a8e84] mt-1">
@@ -128,21 +102,13 @@
 
                 <!-- peso -->
                 <div>
-                    <label for="peso"
-                        class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                    <label for="peso" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                         Peso (kg)
                     </label>
 
-                    <input type="number"
-                        step="0.1"
-                        id="peso"
-                        name="peso"
-                        value="{{ old('peso') }}"
-                        min="0.5"
-                        max="100"
+                    <input type="number" step="0.1" id="peso" name="peso" value="{{ old('peso') }}" min="0.5" max="100"
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
-                        placeholder="0.0"
-                        required>
+                        placeholder="0.0" required>
                 </div>
 
                 <!-- foto -->
@@ -152,11 +118,7 @@
                     </label>
 
                     <!-- input real oculto -->
-                    <input type="file"
-                        id="foto"
-                        name="foto"
-                        accept="image/*"
-                        class="hidden">
+                    <input type="file" id="foto" name="foto" accept="image/*" class="hidden">
 
                     <div class="flex flex-col gap-2">
 
@@ -167,8 +129,7 @@
                         </label>
 
                         <!-- nombre archivo -->
-                        <span id="nombre-archivo"
-                            class="text-sm text-[#8a8e84] break-all">
+                        <span id="nombre-archivo" class="text-sm text-[#8a8e84] break-all">
                             Ningún archivo seleccionado
                         </span>
 

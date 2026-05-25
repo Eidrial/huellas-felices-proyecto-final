@@ -34,7 +34,7 @@
                     <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus minlength="2"
                         maxlength="255" autocomplete="name"
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 md:py-3 text-sm md:text-base text-[#1e2e1a] placeholder-[#b0b4aa] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
-                        placeholder="Tu nombre completo">
+                        placeholder="Tu nombre">
                 </div>
 
                 <!-- email -->

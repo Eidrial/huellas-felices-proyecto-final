@@ -135,7 +135,7 @@
 
     <!-- menu tablet/movil -->
     <div id="menu-movil" class="lg:hidden hidden border-t border-[#1e3d1a] bg-[#2d5a27]">
-        <div class="max-w-7xl mx-auto px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-1">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col items-start gap-0.5">
 
             @auth
 
@@ -164,7 +164,7 @@
                     </a>
 
                     <a href="{{ route('estancias.create') }}"
-                        class="text-[#f0ede6] bg-[#1a3d15] hover:bg-[#4a8a38] text-sm px-3 py-2.5 rounded-lg font-medium transition-colors duration-200 sm:col-span-2">
+                        class="text-sm px-3 py-2.5 rounded-lg font-medium transition-colors duration-200">
                         Reservar estancia
                     </a>
                 @endif
@@ -215,7 +215,7 @@
                     Ayuda
                 </a>
 
-                <div class="h-px bg-[#3a7a2e] my-1 sm:col-span-2"></div>
+                <div class="w-full h-px bg-[#3a7a2e] my-1"></div>
 
                 <form method="POST" action="{{ route('logout') }}" class="sm:col-span-2">
                     @csrf
@@ -240,7 +240,7 @@
                 </a>
 
                 <a href="{{ route('register') }}"
-                    class="text-[#f0ede6] bg-[#1a3d15] hover:bg-[#4a8a38] text-sm px-3 py-2.5 rounded-lg font-medium transition-colors duration-200 sm:col-span-2">
+                    class="text-sm px-3 py-2.5 rounded-lg font-medium transition-colors duration-200">
                     Registrarse
                 </a>
             @endguest

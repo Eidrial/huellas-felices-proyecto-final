@@ -86,10 +86,11 @@ class EstanciaController extends Controller
     //formulario para crear nueva estancia
     public function create()
     {
-        //incluye pendientes
         $mascotas = Auth::user()->mascotas()->get();
 
-        return view('estancias.create', compact('mascotas'));
+        $reservaEnCurso = session('reserva_pendiente');
+
+        return view('estancias.create', compact('mascotas', 'reservaEnCurso'));
     }
 
     //guardar estancia
@@ -113,9 +114,20 @@ class EstanciaController extends Controller
         //comprobar que el usuario tiene sus datos personales completos antes de reservar
         $user = Auth::user();
 
+        //GUARDAR INTENTO Y REDIRIGIR A PERFIL SI FALTAN DATOS
         if (!$user->apellidos || !$user->dni || !$user->telefono || !$user->direccion) {
-            return redirect()->route('profile.edit')
-                ->with('error', 'Debes completar tus datos personales antes de reservar una estancia.');
+
+            session([
+                'reserva_pendiente' => $request->only([
+                    'mascota_id',
+                    'fecha_entrada',
+                    'fecha_salida',
+                    'medicacion_descripcion',
+                    'medicacion_horas'
+                ])
+            ]);
+
+            return redirect()->route('profile.edit')->with('error', 'Completa tus datos personales para continuar con la reserva.');
         }
 
         $mascota = Mascota::find($request->mascota_id);
@@ -212,6 +224,9 @@ class EstanciaController extends Controller
 
         $estancia->calcularPrecioTotal();
         $estancia->save();
+
+        //LIMPIAR SESION DE RESERVA PENDIENTE (olvidarla)
+        session()->forget('reserva_pendiente');
 
         //si la estancia ha quedado confirmada automaticamente, mandar email
         if ($estancia->estado == 'confirmada') {

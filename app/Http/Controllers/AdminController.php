@@ -36,7 +36,7 @@ class AdminController extends Controller
             'raza' => 'required|string|min:2|max:80',
             'edad' => 'required|integer|min:1|max:25',
             'peso' => 'required|numeric|min:0.5|max:100',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048', //validar imagen
+            'foto' => 'nullable|image|max:3072', //validar imagen
         ]);
 
         //actualizar datos básicos de la mascota
@@ -170,7 +170,7 @@ class AdminController extends Controller
             'message' => $message,
         ]);
     }
-    
+
     //eliminar una mascota (con ajax)
     public function eliminarMascota(Mascota $mascota)
     {
