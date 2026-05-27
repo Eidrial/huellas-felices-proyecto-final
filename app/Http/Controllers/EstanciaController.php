@@ -389,6 +389,10 @@ class EstanciaController extends Controller
     //historial de cuidados para dueño, admin o cuidador
     public function historial(Estancia $estancia)
     {
+
+        //para ver todos los cuidados (probable scroll largo si hay muchos)
+        $verTodo = request('ver_todo', false);
+
         if (!$this->puedeVerEstancia($estancia)) {
             return redirect()->route('home')->with('error', 'No puedes ver el historial de esta estancia.');
         }
@@ -399,7 +403,15 @@ class EstanciaController extends Controller
         //REALIZADOS (historial)
         $realizados = $estancia->cuidados()
             ->with('usuario')
-            ->where('completado', true)
+            ->where('completado', true);
+
+        if (!$verTodo) {
+            //subdays(2) = ultimos 3 dias (hoy, ayer y anteayer), para no saturar la vista y evitar scroll demasiado largo
+            $fechaLimite = now()->subDays(2)->toDateString();
+            $realizados->where('fecha', '>=', $fechaLimite);
+        }
+
+        $realizados = $realizados
             ->orderByDesc('fecha')
             ->orderBy('hora')
             ->get()
@@ -409,7 +421,15 @@ class EstanciaController extends Controller
 
         //PENDIENTES (para atrasadas y hoy)
         $listaPendientes = $estancia->cuidados()
-            ->where('completado', false)
+            ->where('completado', false);
+
+        if (!$verTodo) {
+            //subdays(2) = ultimos 3 dias (hoy, ayer y anteayer), para no saturar la vista y evitar scroll demasiado largo
+            $fechaLimite = now()->subDays(2)->toDateString();
+            $listaPendientes->where('fecha', '>=', $fechaLimite);
+        }
+
+        $listaPendientes = $listaPendientes
             ->orderBy('fecha')
             ->orderBy('hora')
             ->get();

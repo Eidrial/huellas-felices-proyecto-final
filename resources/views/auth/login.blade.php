@@ -84,10 +84,10 @@
                     </div>
                 </div>
 
-                <!-- recordarme -->
+                <!-- mantener sesion iniciada -->
                 <label class="inline-flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="remember" class="w-4 h-4 rounded border-[#d9ddd0] accent-[#5a9e47]">
-                    <span class="text-sm text-[#8a8e84]">Recordarme</span>
+                    <span class="text-sm text-[#8a8e84]">Mantener sesión iniciada</span>
                 </label>
 
                 <!-- boton -->

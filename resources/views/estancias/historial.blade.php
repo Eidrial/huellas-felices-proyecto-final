@@ -22,7 +22,7 @@
             <div class="mb-7">
 
                 <a href="{{ $volverRuta }}"
-                   class="inline-flex items-center gap-1.5 text-sm text-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200 mb-4">
+                    class="inline-flex items-center gap-1.5 text-sm text-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200 mb-4">
                     <span>←</span>
                     {{ $volverTexto }}
                 </a>
@@ -37,6 +37,22 @@
                     —
                     {{ date('d/m/Y', strtotime($estancia->fechaSalidaVisible())) }}
                 </p>
+
+                <!-- boton ver todo -->
+                <div class="mt-3">
+                    @if (!request('ver_todo'))
+                        <a href="{{ request()->fullUrlWithQuery(['ver_todo' => 1]) }}"
+                            class="text-sm px-3 py-1 rounded bg-[#e6f0fb] text-[#1a4f8a] border border-[#b0cef0] inline-block">
+                            Ver historial completo
+                        </a>
+                    @else
+                    <!-- elimina el parametro ver_todo -->
+                        <a href="{{ request()->fullUrlWithQuery(['ver_todo' => null]) }}"
+                            class="text-sm px-3 py-1 rounded bg-[#f0ede6] text-[#1e2e1a] border border-[#d9ddd0] inline-block">
+                            Mostrar solo días recientes
+                        </a>
+                    @endif
+                </div>
 
             </div>
 
@@ -219,60 +235,62 @@
 
                     <div class="border-t border-[#f0ede6] px-4 sm:px-5 py-4">
 
-                        @if ($realizados->count() == 0)
+                        @if ($totalRealizados == 0)
                             <p class="text-sm text-[#8a8e84]">
                                 Todavía no hay cuidados marcados como realizados.
                             </p>
                         @else
+                            <div class="space-y-3">
+                                @foreach ($realizados as $fecha => $cuidados)
+                                    <div class="space-y-2">
+                                        <p class="text-xs font-medium text-[#2d5a27]">
+                                            {{ date('d/m/Y', strtotime($fecha)) }}
+                                        </p>
 
-                            <ul class="space-y-2">
+                                        <ul class="space-y-2">
 
-                                @foreach ($realizados as $cuidado)
-                                    <li class="bg-[#f7f5f0] rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                                            @foreach ($cuidados as $cuidado)
+                                                <li class="bg-[#f7f5f0] rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
 
-                                        <div class="min-w-0">
+                                                    <div class="min-w-0">
 
-                                            <p class="text-xs text-[#8a8e84] mb-1">
-                                                {{ date('d/m/Y', strtotime($cuidado->fecha)) }}
-                                            </p>
+                                                        <p class="text-sm font-medium text-[#1e2e1a] break-words">
+                                                            {{ ucfirst($cuidado->tipo) }}
 
-                                            <p class="text-sm font-medium text-[#1e2e1a] break-words">
-                                                {{ ucfirst($cuidado->tipo) }}
+                                                            @if ($cuidado->hora)
+                                                                · {{ substr($cuidado->hora, 0, 5) }}
+                                                            @endif
 
-                                                @if ($cuidado->hora)
-                                                    · {{ substr($cuidado->hora, 0, 5) }}
-                                                @endif
+                                                            @if ($cuidado->tipo == 'extra' && $cuidado->precio_extra !== null)
+                                                                · {{ number_format($cuidado->precio_extra, 2) }} €
+                                                            @endif
+                                                        </p>
 
-                                                @if ($cuidado->tipo == 'extra' && $cuidado->precio_extra !== null)
-                                                    · {{ number_format($cuidado->precio_extra, 2) }} €
-                                                @endif
-                                            </p>
+                                                        @if ($cuidado->descripcion)
+                                                            <p class="text-xs text-[#8a8e84] mt-0.5 break-words">
+                                                                {{ $cuidado->descripcion }}
+                                                            </p>
+                                                        @endif
 
-                                            @if ($cuidado->descripcion)
-                                                <p class="text-xs text-[#8a8e84] mt-0.5 break-words">
-                                                    {{ $cuidado->descripcion }}
-                                                </p>
-                                            @endif
+                                                        @if ($cuidado->usuario)
+                                                            <p class="text-xs text-[#8a8e84] mt-0.5">
+                                                                por {{ ucfirst($cuidado->usuario->role) }}
+                                                            </p>
+                                                        @endif
 
-                                            @if ($cuidado->usuario)
-                                                <p class="text-xs text-[#8a8e84] mt-0.5">
-                                                    por {{ ucfirst($cuidado->usuario->role) }}
-                                                </p>
-                                            @endif
+                                                    </div>
 
-                                        </div>
+                                                    <span class="shrink-0 w-fit inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-[#eef5e8] text-[#2d5a27] border border-[#b0cc9e]">
+                                                        Realizado
+                                                    </span>
 
-                                        <span class="shrink-0 w-fit inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-[#eef5e8] text-[#2d5a27] border border-[#b0cc9e]">
-                                            Realizado
-                                        </span>
+                                                </li>
+                                            @endforeach
 
-                                    </li>
+                                        </ul>
+
+                                    </div>
                                 @endforeach
-
-                            </ul>
-
-                            <div class="mt-4">
-                                {{ $realizados->links() }}
                             </div>
 
                         @endif
