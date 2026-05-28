@@ -83,17 +83,6 @@ class EstanciaAdminController extends Controller
             return back()->with('error', 'No hay disponibilidad.');
         }
 
-        //mandar email al dueño
-        $estancia->load('mascota.dueno');
-
-        $emailDueno = $estancia->mascota->dueno->email ?? null;
-        //si hay override en .env, mandar ahi (pruebass)
-        $destinatario = config('mail.to_override') ? config('mail.to_override') : $emailDueno;
-
-        if ($destinatario) {
-            Mail::to($destinatario)->send(new EstanciaConfirmadaMail($estancia));
-        }
-
         return back()->with('success', 'Estancia confirmada correctamente.');
     }
 

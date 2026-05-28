@@ -200,21 +200,13 @@ class EstanciaController extends Controller
             return back()->with('error', 'Esta mascota ya tiene otra estancia entre estas fechas.');
         }
 
-        //estado segun aprobacion de mascota y disponibilidad
-        if ($mascota->aprobado != 1) {
-            $estado = 'pendiente';
-        } elseif (!Estancia::hayDisponibilidad($request->fecha_entrada, $request->fecha_salida)) {
-            $estado = 'sin_disponibilidad';
-        } else {
-            $estado = 'confirmada';
-        }
-
         $medicacionDescripcion = trim($request->medicacion_descripcion);
         $medicacionHoras = trim($request->medicacion_horas);
 
+        //crear siempre como pendiente inicialmente
         $estancia = Estancia::create([
             'mascota_id' => $mascota->id,
-            'estado' => $estado,
+            'estado' => 'pendiente',
             'fecha_entrada' => $request->fecha_entrada,
             'fecha_salida' => $request->fecha_salida,
             'precio_dia' => config('residencia.precio_dia'),
@@ -222,24 +214,23 @@ class EstanciaController extends Controller
             'medicacion_horas' => $medicacionHoras ? $medicacionHoras : null,
         ]);
 
+        //si la mascota ya estaba aprobada, intentar confirmar
+        if ($mascota->aprobado == 1) {
+
+            //confirmar() comprueba disponibilidad internamente (en el modelo estancia)
+            if (!$estancia->confirmar()) {
+
+                //si no hay disponibilidad, el estado cambiara a "sin disponibilidad"
+                $estancia->estado = 'sin_disponibilidad';
+                $estancia->save();
+            }
+        }
+
         $estancia->calcularPrecioTotal();
         $estancia->save();
 
         //LIMPIAR SESION DE RESERVA PENDIENTE (olvidarla)
         session()->forget('reserva_pendiente');
-
-        //si la estancia ha quedado confirmada automaticamente, mandar email
-        if ($estancia->estado == 'confirmada') {
-            $estancia->load('mascota.dueno');
-
-            $emailDueno = $estancia->mascota->dueno->email ?? null;
-            //si hay override en .env, mandar ahi (pruebass)
-            $destinatario = config('mail.to_override') ? config('mail.to_override') : $emailDueno;
-
-            if ($destinatario) {
-                Mail::to($destinatario)->send(new EstanciaConfirmadaMail($estancia));
-            }
-        }
 
         if ($estancia->estado == 'sin_disponibilidad') {
             return redirect()->route('estancias.index')->with('warning', 'Estancia creada, pero no hay plazas disponibles para esas fechas.');

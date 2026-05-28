@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Mascota;
 use App\Models\Cuidado;
 use App\Models\Aviso;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EstanciaConfirmadaMail;
 
 class Estancia extends Model
 {
@@ -234,7 +236,7 @@ class Estancia extends Model
     }
 
     //confirma la estancia (si hay disponibilidad)
-    public function confirmar()
+    public function confirmar($enviarMail = true)
     {
 
         $entrada = new \DateTime($this->fecha_entrada);
@@ -245,12 +247,30 @@ class Estancia extends Model
             return false;
         }
 
+        //comprobar disponibilidad
         if (!self::hayDisponibilidad($this->fecha_entrada, $this->fecha_salida)) {
             return false;
         }
 
+        //confirmar estancia
         $this->estado = 'confirmada';
         $this->save();
+
+        //enviar mail automaticamente
+        if ($enviarMail) {
+
+            $this->load('mascota.dueno');
+
+            //comprobar si hay mail
+            $emailDueno = $this->mascota->dueno->email ?? null;
+
+            //si hay override en .env, mandar ahi (pruebass)
+            $destinatario = config('mail.to_override') ? config('mail.to_override') : $emailDueno;
+
+            if ($destinatario) {
+                Mail::to($destinatario)->send(new EstanciaConfirmadaMail($this));
+            }
+        }
 
         return true;
     }
