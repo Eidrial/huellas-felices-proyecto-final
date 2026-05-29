@@ -4,11 +4,6 @@
 
     <div class="max-w-7xl mx-auto px-4 py-8">
 
-        <a href="{{ route('dashboard') }}"
-            class="inline-flex items-center gap-1.5 text-sm text-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200 mb-4">
-            <span>←</span> Volver
-        </a>
-
         <!-- cabecera -->
         <div class="relative bg-[#2d5a27] rounded-2xl overflow-hidden mb-6 px-7 py-8">
             <div class="absolute right-6 top-4 text-[4rem] opacity-[0.07] select-none leading-none">🐾</div>

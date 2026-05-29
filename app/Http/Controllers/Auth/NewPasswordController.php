@@ -47,6 +47,14 @@ class NewPasswordController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user) use ($request) {
+
+                //impedir reutilizar contraseña
+                if (Hash::check($request->password, $user->password)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'password' => 'La nueva contraseña no puede ser igual a la anterior.',
+                    ]);
+                }
+
                 $user->forceFill([
                     'password' => Hash::make($request->password),
                     'remember_token' => Str::random(60),

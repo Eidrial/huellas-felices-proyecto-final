@@ -379,6 +379,12 @@ class AdminController extends Controller
 
         //si se ha introducido una nueva contraseña, se reemplaza la anterior (si no, se mantiene la contraseña actual)
         if ($request->filled('password')) {
+
+            // impedir reutilizar la misma contraseña
+            if (Hash::check($request->password, $user->password)) {
+                return back()->withErrors(['password' => 'La nueva contraseña no puede ser igual a la actual.'])->withInput();
+            }
+
             $user->password = Hash::make($request->password);
         }
 

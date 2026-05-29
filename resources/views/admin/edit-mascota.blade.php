@@ -66,8 +66,8 @@
                     <input type="text"
                         id="especie"
                         name="especie"
-                        value="{{ old('especie', $mascota->especie) }}"
-                        required
+                        value="{{ ucfirst(old('especie', $mascota->especie)) }}"
+                        required disabled
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200">
                 </div>
 

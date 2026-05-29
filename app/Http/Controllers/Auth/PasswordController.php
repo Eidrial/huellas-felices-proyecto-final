@@ -20,6 +20,13 @@ class PasswordController extends Controller
             'password' => ['required', Password::min(8)->letters()->numbers(), 'confirmed'],
         ]);
 
+        //impedir reutilizar la misma contraseña
+        if (Hash::check($validated['password'], $request->user()->password)) {
+            return back()->withErrors([
+                'password' => 'La nueva contraseña no puede ser igual a la actual.'
+            ], 'updatePassword');
+        }
+
         $request->user()->update([
             'password' => Hash::make($validated['password']),
         ]);

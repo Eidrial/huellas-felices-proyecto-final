@@ -96,7 +96,7 @@
                                     </td>
 
                                     <td class="px-5 py-3.5 text-[#1e2e1a]">{{ $estancia->mascota->dueno->name ?? '—' }}</td>
-
+                                    
                                     <td class="px-5 py-3.5 text-[#1e2e1a] whitespace-nowrap">
                                         {{ date('d/m/Y', strtotime($estancia->fecha_entrada)) }}
                                     </td>
@@ -111,8 +111,8 @@
                                             <span class="text-sm {{ $estadoVisual['etiqueta'] }}">{{ $estadoVisual['texto'] }}</span>
                                         </div>
 
-                                        @if($estancia->pendienteIniciar())<p class="text-xs text-[#7a4e10] mt-0.5">pendiente de iniciar</p>@endif
-                                        @if($estancia->pendienteFinalizar())<p class="text-xs text-[#7a3a10] mt-0.5">pendiente de finalizar</p>@endif
+                                        @if($estancia->pendienteIniciar())<p class="text-xs text-[#7a4e10] mt-0.5">Pendiente de iniciar</p>@endif
+                                        @if($estancia->pendienteFinalizar())<p class="text-xs text-[#7a3a10] mt-0.5">Pendiente de finalizar</p>@endif
                                     </td>
 
                                     <td class="px-5 py-3.5">
@@ -193,8 +193,8 @@
                                 @endforelse
                             </div>
 
-                            @if($estancia->pendienteIniciar())<p class="text-xs text-[#7a4e10] mt-1.5">pendiente de iniciar</p>@endif
-                            @if($estancia->pendienteFinalizar())<p class="text-xs text-[#7a3a10] mt-1">pendiente de finalizar</p>@endif
+                            @if($estancia->pendienteIniciar())<p class="text-xs text-[#7a4e10] mt-1.5">Pendiente de iniciar</p>@endif
+                            @if($estancia->pendienteFinalizar())<p class="text-xs text-[#7a3a10] mt-1">Pendiente de finalizar</p>@endif
                         </div>
 
                         <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3">
@@ -274,8 +274,8 @@
                                 @endforelse
                             </div>
 
-                            @if($estancia->pendienteIniciar())<p class="text-xs text-[#7a4e10] mt-1.5">pendiente de iniciar</p>@endif
-                            @if($estancia->pendienteFinalizar())<p class="text-xs text-[#7a3a10] mt-1">pendiente de finalizar</p>@endif
+                            @if($estancia->pendienteIniciar())<p class="text-xs text-[#7a4e10] mt-1.5">Pendiente de iniciar</p>@endif
+                            @if($estancia->pendienteFinalizar())<p class="text-xs text-[#7a3a10] mt-1">Pendiente de finalizar</p>@endif
                         </div>
 
                         <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3">
@@ -327,13 +327,17 @@
                                 <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">Salida</th>
                                 <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">Estado</th>
                                 <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">Total</th>
-                                <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider">Consulta</th>
+                                <th class="text-left px-5 py-3.5 text-xs font-medium text-[#8a8e84] uppercase tracking-wider w-64">Consulta</th>
                             </tr>
                         </thead>
 
                         <tbody class="divide-y divide-[#f0ede6]">
                             @foreach($estancias as $estancia)
-                                @php $estadoVisual = $estancia->getEstadoVisual(); @endphp
+                                @php
+                                    $estadoVisual = $estancia->getEstadoVisual();
+                                    $mostrarHistorialAvisos = $estancia->esFinalizada() || $estancia->fueActiva();
+                                    $mostrarFactura = $estancia->esFinalizada() || $estancia->fueActiva() || $estancia->esCancelacionUnDia();
+                                @endphp
 
                                 <tr class="hover:bg-[#fafaf8] transition-colors duration-150">
                                     <td class="px-5 py-3.5">
@@ -343,35 +347,54 @@
                                     <td class="px-5 py-3.5 text-[#1e2e1a]">{{ $estancia->mascota->dueno->name ?? '—' }}</td>
                                     <td class="px-5 py-3.5 text-[#1e2e1a] whitespace-nowrap">{{ date('d/m/Y', strtotime($estancia->fecha_entrada)) }}</td>
                                     <td class="px-5 py-3.5 text-[#1e2e1a] whitespace-nowrap">{{ date('d/m/Y', strtotime($estancia->fechaSalidaVisible())) }}</td>
-
+                                   
                                     <td class="px-5 py-3.5">
                                         <div class="flex items-center gap-1.5">
                                             <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $estadoVisual['punto'] }}"></span>
                                             <span class="text-sm {{ $estadoVisual['etiqueta'] }}">{{ $estadoVisual['texto'] }}</span>
                                         </div>
+
+                                        @if($estancia->esCancelada())
+                                            <p class="text-xs text-[#8a8e84] mt-0.5">
+                                                {{ date('d/m/Y H:i', strtotime($estancia->updated_at)) }}
+                                            </p>
+                                        @endif
+
+                                        @if($estancia->esFinalizada())
+                                            <p class="text-xs text-[#8a8e84] mt-0.5">
+                                                {{ date('d/m/Y H:i', strtotime($estancia->updated_at)) }}
+                                            </p>
+                                        @endif
+
                                     </td>
 
                                     <td class="px-5 py-3.5 font-medium text-[#1e2e1a] whitespace-nowrap">{{ number_format($estancia->precio_total ?? 0, 2) }} €</td>
+                                   
+                                    <td class="px-5 py-3.5 w-64 align-top">
+                                        @if($mostrarHistorialAvisos || $mostrarFactura)
+                                            <div class="flex flex-wrap gap-1.5">
+                                                @if($mostrarHistorialAvisos)
+                                                    <a href="{{ route('estancias.historial', $estancia) }}"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                                        Historial
+                                                    </a>
 
-                                    <td class="px-5 py-3.5">
-                                        <div class="flex flex-wrap gap-1.5">
-                                            <a href="{{ route('estancias.historial', $estancia) }}"
-                                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                                Historial
-                                            </a>
+                                                    <a href="{{ route('estancias.avisos', $estancia) }}"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
+                                                        Avisos
+                                                    </a>
 
-                                            <a href="{{ route('estancias.avisos', $estancia) }}"
-                                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
-                                                Avisos
-                                            </a>
-
-                                            @if($estancia->esFinalizada() || ($estancia->esCancelada() && $estancia->precio_total > 0))
-                                                <a href="{{ route('estancias.factura', $estancia) }}"
-                                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
-                                                    Factura
-                                                </a>
-                                            @endif
-                                        </div>
+                                                @endif
+                                                @if($mostrarFactura)
+                                                    <a href="{{ route('estancias.factura', $estancia) }}"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                                        Factura
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-xs text-[#c0bdb8]">Sin acciones disponibles.</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
@@ -383,7 +406,11 @@
             <!-- tablet -->
             <div class="hidden md:grid lg:hidden grid-cols-2 gap-4">
                 @foreach($estancias as $estancia)
-                    @php $estadoVisual = $estancia->getEstadoVisual(); @endphp
+                    @php
+                        $estadoVisual = $estancia->getEstadoVisual();
+                        $mostrarHistorialAvisos = $estancia->esFinalizada() || $estancia->fueActiva();
+                        $mostrarFactura = $estancia->esFinalizada() || $estancia->fueActiva() || $estancia->esCancelacionUnDia();
+                    @endphp
 
                     <div class="bg-white border border-[#d9ddd0] rounded-2xl overflow-hidden h-full flex flex-col">
                         <div class="p-5 flex-1">
@@ -412,24 +439,43 @@
                             </div>
 
                             <p class="text-sm font-medium text-[#1e2e1a]">{{ number_format($estancia->precio_total ?? 0, 2) }} €</p>
+                            
+                            @if($estancia->esCancelada())
+                                <p class="text-xs text-[#8a8e84] mt-1">
+                                    Cancelada el {{ date('d/m/Y H:i', strtotime($estancia->updated_at)) }}
+                                </p>
+                            @endif
+
+                            @if($estancia->esFinalizada())
+                                <p class="text-xs text-[#8a8e84] mt-1">
+                                    Finalizada el {{ date('d/m/Y H:i', strtotime($estancia->updated_at)) }}
+                                </p>
+                            @endif
+
                         </div>
 
                         <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3 flex flex-wrap gap-2">
-                            <a href="{{ route('estancias.historial', $estancia) }}"
-                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                Historial
-                            </a>
-
-                            <a href="{{ route('estancias.avisos', $estancia) }}"
-                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
-                                Avisos
-                            </a>
-
-                            @if($estancia->esFinalizada() || ($estancia->esCancelada() && $estancia->precio_total > 0))
-                                <a href="{{ route('estancias.factura', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
-                                    Factura
-                                </a>
+                            @if($mostrarHistorialAvisos || $mostrarFactura)
+                                @if($mostrarHistorialAvisos)
+                                    <a href="{{ route('estancias.historial', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                        Historial
+                                    </a>
+                                    
+                                    <a href="{{ route('estancias.avisos', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
+                                        Avisos
+                                    </a>
+                                    
+                                @endif
+                                @if($mostrarFactura)
+                                    <a href="{{ route('estancias.factura', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                        Factura
+                                    </a>
+                                @endif
+                            @else
+                                <span class="text-xs text-[#c0bdb8]">Sin acciones disponibles.</span>
                             @endif
                         </div>
                     </div>
@@ -439,7 +485,11 @@
             <!-- movil historial -->
             <div class="md:hidden space-y-3">
                 @foreach($estancias as $estancia)
-                    @php $estadoVisual = $estancia->getEstadoVisual(); @endphp
+                    @php
+                        $estadoVisual = $estancia->getEstadoVisual();
+                        $mostrarHistorialAvisos = $estancia->esFinalizada() || $estancia->fueActiva();
+                        $mostrarFactura = $estancia->esFinalizada() || $estancia->fueActiva() || $estancia->esCancelacionUnDia();
+                    @endphp
 
                     <div class="bg-white border border-[#d9ddd0] rounded-2xl overflow-hidden">
                         <div class="p-4">
@@ -468,24 +518,42 @@
                             </div>
 
                             <p class="text-sm font-medium text-[#1e2e1a]">{{ number_format($estancia->precio_total ?? 0, 2) }} €</p>
+                          
+                            @if($estancia->esCancelada())
+                                <p class="text-xs text-[#8a8e84] mt-1">
+                                    Cancelada el {{ date('d/m/Y H:i', strtotime($estancia->updated_at)) }}
+                                </p>
+                            @endif
+
+                            @if($estancia->esFinalizada())
+                                <p class="text-xs text-[#8a8e84] mt-1">
+                                    Finalizada el {{ date('d/m/Y H:i', strtotime($estancia->updated_at)) }}
+                                </p>
+                            @endif
+
                         </div>
 
                         <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3 flex flex-wrap gap-2">
-                            <a href="{{ route('estancias.historial', $estancia) }}"
-                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                Historial
-                            </a>
+                            @if($mostrarHistorialAvisos || $mostrarFactura)
+                                @if($mostrarHistorialAvisos)
+                                    <a href="{{ route('estancias.historial', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                        Historial
+                                    </a>
 
-                            <a href="{{ route('estancias.avisos', $estancia) }}"
-                                class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
-                                Avisos
-                            </a>
-
-                            @if($estancia->esFinalizada() || ($estancia->esCancelada() && $estancia->precio_total > 0))
-                                <a href="{{ route('estancias.factura', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
-                                    Factura
-                                </a>
+                                    <a href="{{ route('estancias.avisos', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
+                                        Avisos
+                                    </a>
+                                @endif
+                                @if($mostrarFactura)
+                                    <a href="{{ route('estancias.factura', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#8a8e84] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                        Factura
+                                    </a>
+                                @endif
+                            @else
+                                <span class="text-xs text-[#c0bdb8]">Sin acciones disponibles.</span>
                             @endif
                         </div>
                     </div>

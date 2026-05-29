@@ -133,6 +133,9 @@
 
                                     //si hay, poner cantidad, si no, 0
                                     $pendientes = $pendientesHoy[$estancia->id] ?? 0;
+
+                                    $mostrarHistorialAvisos = $estancia->esActiva() || $estancia->esFinalizada() || $estancia->fueActiva();
+                                    $mostrarFactura = $estancia->esActiva() || $estancia->esFinalizada() || $estancia->fueActiva() || $estancia->esCancelacionUnDia();
                                 @endphp
 
                                 <tr class="hover:bg-[#fafaf8] transition-colors duration-150">
@@ -241,45 +244,49 @@
 
                                     <td class="px-5 py-3.5">
                                         <div class="flex flex-wrap gap-1.5">
-                                            @if($estancia->esActiva() || $estancia->esFinalizada() || ($estancia->esCancelada() && $estancia->precio_total > 0))
-                                                <a href="{{ route('estancias.factura', $estancia) }}"
-                                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
-                                                    Factura
-                                                </a>
-                                            @endif
+                                            @if($mostrarFactura || $mostrarHistorialAvisos || $estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
+                                                @if($mostrarFactura)
+                                                    <a href="{{ route('estancias.factura', $estancia) }}"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                                        Factura
+                                                    </a>
+                                                @endif
 
-                                            @if($estancia->esActiva() || $estancia->esFinalizada())
-                                                <a href="{{ route('estancias.historial', $estancia) }}"
-                                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                                    Historial
-                                                </a>
+                                                @if($mostrarHistorialAvisos)
+                                                    <a href="{{ route('estancias.historial', $estancia) }}"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                                        Historial
+                                                    </a>
 
-                                                <a href="{{ route('estancias.avisos', $estancia) }}"
-                                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
-                                                    Avisos
-                                                </a>
-                                            @endif
+                                                    <a href="{{ route('estancias.avisos', $estancia) }}"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
+                                                        Avisos
+                                                    </a>
+                                                @endif
 
-                                            @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
-                                                <a href="{{ route('estancias.edit', $estancia) }}"
-                                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                                    Editar
-                                                </a>
-                                            @endif
+                                                @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
+                                                    <a href="{{ route('estancias.edit', $estancia) }}"
+                                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                                        Editar
+                                                    </a>
+                                                @endif
 
-                                            @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esSinDisponibilidad())
-                                                <form id="form-cancelar-{{ $estancia->id }}" method="POST"
-                                                    action="{{ route('estancias.cancelar', $estancia) }}" class="hidden">
-                                                    @csrf
-                                                    @method('PUT')
-                                                </form>
+                                                @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esSinDisponibilidad())
+                                                    <form id="form-cancelar-{{ $estancia->id }}" method="POST"
+                                                        action="{{ route('estancias.cancelar', $estancia) }}" class="hidden">
+                                                        @csrf
+                                                        @method('PUT')
+                                                    </form>
 
-                                                <button type="button"
-                                                    class="btn-cancelar-estancia text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
-                                                    data-id="{{ $estancia->id }}"
-                                                    data-msg="{{ $estancia->mensajeCancelacion() }}">
-                                                    Cancelar
-                                                </button>
+                                                    <button type="button"
+                                                        class="btn-cancelar-estancia text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
+                                                        data-id="{{ $estancia->id }}"
+                                                        data-msg="{{ $estancia->mensajeCancelacion() }}">
+                                                        Cancelar
+                                                    </button>
+                                                @endif
+                                            @else
+                                                <span class="text-xs text-[#c0bdb8]">Sin acciones disponibles.</span>
                                             @endif
                                         </div>
                                     </td>
@@ -305,6 +312,9 @@
 
                         //si hay, poner cantidad, si no, 0
                         $pendientes = $pendientesHoy[$estancia->id] ?? 0;
+
+                        $mostrarHistorialAvisos = $estancia->esActiva() || $estancia->esFinalizada() || $estancia->fueActiva();
+                        $mostrarFactura = $estancia->esActiva() || $estancia->esFinalizada() || $estancia->fueActiva() || $estancia->esCancelacionUnDia();
                     @endphp
 
                     <div class="bg-white border border-[#d9ddd0] rounded-2xl overflow-hidden h-full flex flex-col">
@@ -404,45 +414,49 @@
 
                         <!-- total + acciones -->
                         <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3 flex gap-2 flex-wrap">
-                            @if($estancia->esActiva() || $estancia->esFinalizada() || ($estancia->esCancelada() && $estancia->precio_total > 0))
-                                <a href="{{ route('estancias.factura', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
-                                    Factura
-                                </a>
-                            @endif
+                            @if($mostrarFactura || $mostrarHistorialAvisos || $estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
+                                @if($mostrarFactura)
+                                    <a href="{{ route('estancias.factura', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                        Factura
+                                    </a>
+                                @endif
 
-                            @if($estancia->esActiva() || $estancia->esFinalizada())
-                                <a href="{{ route('estancias.historial', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                    Historial
-                                </a>
+                                @if($mostrarHistorialAvisos)
+                                    <a href="{{ route('estancias.historial', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                        Historial
+                                    </a>
 
-                                <a href="{{ route('estancias.avisos', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
-                                    Avisos
-                                </a>
-                            @endif
+                                    <a href="{{ route('estancias.avisos', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
+                                        Avisos
+                                    </a>
+                                @endif
 
-                            @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
-                                <a href="{{ route('estancias.edit', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                    Editar
-                                </a>
-                            @endif
+                                @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
+                                    <a href="{{ route('estancias.edit', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                        Editar
+                                    </a>
+                                @endif
 
-                            @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esSinDisponibilidad())
-                                <form id="form-cancelar-{{ $estancia->id }}" method="POST"
-                                    action="{{ route('estancias.cancelar', $estancia) }}" class="hidden">
-                                    @csrf
-                                    @method('PUT')
-                                </form>
+                                @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esSinDisponibilidad())
+                                    <form id="form-cancelar-{{ $estancia->id }}" method="POST"
+                                        action="{{ route('estancias.cancelar', $estancia) }}" class="hidden">
+                                        @csrf
+                                        @method('PUT')
+                                    </form>
 
-                                <button type="button"
-                                    class="btn-cancelar-estancia text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
-                                    data-id="{{ $estancia->id }}"
-                                    data-msg="{{ $estancia->mensajeCancelacion() }}">
-                                    Cancelar
-                                </button>
+                                    <button type="button"
+                                        class="btn-cancelar-estancia text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
+                                        data-id="{{ $estancia->id }}"
+                                        data-msg="{{ $estancia->mensajeCancelacion() }}">
+                                        Cancelar
+                                    </button>
+                                @endif
+                            @else
+                                <span class="text-xs text-[#c0bdb8]">Sin acciones disponibles.</span>
                             @endif
                         </div>
                     </div>
@@ -462,6 +476,9 @@
 
                         //si hay, poner cantidad, si no, 0
                         $pendientes = $pendientesHoy[$estancia->id] ?? 0;
+
+                        $mostrarHistorialAvisos = $estancia->esActiva() || $estancia->esFinalizada() || $estancia->fueActiva();
+                        $mostrarFactura = $estancia->esActiva() || $estancia->esFinalizada() || $estancia->fueActiva() || $estancia->esCancelacionUnDia();
                     @endphp
 
                     <div class="bg-white border border-[#d9ddd0] rounded-2xl overflow-hidden">
@@ -561,45 +578,49 @@
 
                         <!-- total + acciones -->
                         <div class="bg-[#fafaf8] border-t border-[#e8e5de] px-4 py-3 flex gap-2 flex-wrap">
-                            @if($estancia->esActiva() || $estancia->esFinalizada() || ($estancia->esCancelada() && $estancia->precio_total > 0))
-                                <a href="{{ route('estancias.factura', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
-                                    Factura
-                                </a>
-                            @endif
+                            @if($mostrarFactura || $mostrarHistorialAvisos || $estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
+                                @if($mostrarFactura)
+                                    <a href="{{ route('estancias.factura', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#5a9e47] hover:text-[#2d5a27] transition-colors duration-200">
+                                        Factura
+                                    </a>
+                                @endif
 
-                            @if($estancia->esActiva() || $estancia->esFinalizada())
-                                <a href="{{ route('estancias.historial', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                    Historial
-                                </a>
+                                @if($mostrarHistorialAvisos)
+                                    <a href="{{ route('estancias.historial', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                        Historial
+                                    </a>
 
-                                <a href="{{ route('estancias.avisos', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
-                                    Avisos
-                                </a>
-                            @endif
+                                    <a href="{{ route('estancias.avisos', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#c9821a] hover:text-[#7a4e10] transition-colors duration-200">
+                                        Avisos
+                                    </a>
+                                @endif
 
-                            @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
-                                <a href="{{ route('estancias.edit', $estancia) }}"
-                                    class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
-                                    Editar
-                                </a>
-                            @endif
+                                @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esActiva() || $estancia->esSinDisponibilidad())
+                                    <a href="{{ route('estancias.edit', $estancia) }}"
+                                        class="text-xs px-3 py-1.5 rounded-lg border border-[#d9ddd0] text-[#1e2e1a] hover:border-[#3a7abf] hover:text-[#1a4f8a] transition-colors duration-200">
+                                        Editar
+                                    </a>
+                                @endif
 
-                            @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esSinDisponibilidad())
-                                <form id="form-cancelar-{{ $estancia->id }}" method="POST"
-                                    action="{{ route('estancias.cancelar', $estancia) }}" class="hidden">
-                                    @csrf
-                                    @method('PUT')
-                                </form>
+                                @if($estancia->esPendiente() || $estancia->esConfirmada() || $estancia->esSinDisponibilidad())
+                                    <form id="form-cancelar-{{ $estancia->id }}" method="POST"
+                                        action="{{ route('estancias.cancelar', $estancia) }}" class="hidden">
+                                        @csrf
+                                        @method('PUT')
+                                    </form>
 
-                                <button type="button"
-                                    class="btn-cancelar-estancia text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
-                                    data-id="{{ $estancia->id }}"
-                                    data-msg="{{ $estancia->mensajeCancelacion() }}">
-                                    Cancelar
-                                </button>
+                                    <button type="button"
+                                        class="btn-cancelar-estancia text-xs px-3 py-1.5 rounded-lg border border-[#e8b4b4] text-[#9b2a2a] hover:bg-[#fceaea] transition-colors duration-200"
+                                        data-id="{{ $estancia->id }}"
+                                        data-msg="{{ $estancia->mensajeCancelacion() }}">
+                                        Cancelar
+                                    </button>
+                                @endif
+                            @else
+                                <span class="text-xs text-[#c0bdb8]">Sin acciones disponibles.</span>
                             @endif
                         </div>
                     </div>

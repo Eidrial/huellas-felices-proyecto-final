@@ -523,6 +523,13 @@ class Estancia extends Model
         return $this->estado === 'cancelada';
     }
 
+    //para poder filtrar x acciones en el panel de estancias
+    public function fueActiva()
+    {
+        return $this->esCancelada() && $this->cuidados()->where('tipo', '!=', 'extra')->exists();
+    }
+
+
     //calcular dias
     //dias que faltan para la entrada
     public function diasParaEntrada()

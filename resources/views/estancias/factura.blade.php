@@ -55,8 +55,8 @@
             @if($estancia->esCancelacionUnDia())
                 <div class="bg-[#fef8ec] border border-[#e4c57a] rounded-xl px-4 sm:px-5 py-3.5 mb-5">
                     <p class="text-sm text-[#7a4e10]">
-                        <span class="font-medium">Nota:</span> Esta estancia se cancelo el mismo dia de entrada, por lo que se cobra
-                        1 dia de estancia.
+                        <span class="font-medium">Nota:</span> Esta estancia se canceló el mismo día de entrada, por lo que se cobra
+                        1 día de estancia.
                     </p>
                 </div>
             @endif

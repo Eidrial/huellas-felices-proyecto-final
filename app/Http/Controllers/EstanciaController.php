@@ -291,6 +291,20 @@ class EstanciaController extends Controller
             return back()->with('error', 'No se permiten salidas en domingo.');
         }
 
+        //comprobar si se solapa con otra estancia de la misma mascota
+        $otrasEstancias = Estancia::where('mascota_id', $estancia->mascota_id)->where('id', '!=', $estancia->id)->whereIn('estado', ['pendiente', 'confirmada', 'activa'])->get();
+
+        $hayConflicto = false;
+
+        //hay conflicto si la estancia actual empieza antes de que termine la otra y la nueva fecha de salida supera el inicio de la otra
+        foreach ($otrasEstancias as $est) {
+            $hayConflicto = $hayConflicto || ($estancia->fecha_entrada < $est->fecha_salida && $request->fecha_salida > $est->fecha_entrada);
+        }
+
+        if ($hayConflicto) {
+            return back()->with('error', 'Esta mascota ya tiene otra estancia entre esas fechas.');
+        }
+
         //si estaba sin disponibilidad, al cambiar fecha se vuelve a comprobar disponibilidad
         if ($estancia->esSinDisponibilidad()) {
 

@@ -109,9 +109,9 @@
                             @if(auth()->user()->role === 'admin')
                                 Administración
                             @elseif(auth()->user()->role === 'cuidador')
-                                Cuidados
+                                Cuidador
                             @else
-                                Tu cuenta
+                                Mi perfil
                             @endif
                         @else
                             Acceso
