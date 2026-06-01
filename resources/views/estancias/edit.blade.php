@@ -43,7 +43,7 @@
                     <li>· Mascota: {{ $estancia->mascota->nombre ?? '—' }}</li>
                     <li>· Entrada: {{ date('d/m/Y', strtotime($estancia->fecha_entrada)) }}</li>
                     <li>· Salida actual: {{ date('d/m/Y', strtotime($estancia->fecha_salida)) }}</li>
-                    <li>· Estado: {{ ucfirst($estancia->estado) }}</li>
+                    <li>· Estado: {{ $estancia->getEstadoVisual()['texto'] }}</li>
                     <li>· Puedes acortar la estancia siempre.</li>
                     <li>· Para ampliarla, debe haber disponibilidad.</li>
                     <li>· No se permiten salidas en domingo.</li>
@@ -61,18 +61,44 @@
                     @method('PUT')
 
                     <div>
+                        @if ($estancia->estado == 'sin_disponibilidad')
+
+                            <div>
+                                <label for="fecha_entrada" class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
+                                    Nueva fecha de entrada
+                                </label>
+
+                                <input type="date" id="fecha_entrada" name="fecha_entrada"
+                                    value="{{ old('fecha_entrada', $estancia->fecha_entrada) }}"
+                                    class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
+                                    required>
+                            </div>
+
+                        @endif
+
                         <label for="fecha_salida"
                             class="block text-sm font-medium text-[#1e2e1a] mb-1.5">
                             Nueva fecha de salida
                         </label>
 
-                        <input type="date"
-                            id="fecha_salida"
-                            name="fecha_salida"
-                            value="{{ old('fecha_salida', $estancia->fecha_salida) }}"
-                            min="{{ $estancia->fecha_entrada }}"
-                            class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
-                            required>
+                        @if ($estancia->estado == 'sin_disponibilidad')
+
+                            <input type="date" 
+                                id="fecha_salida" 
+                                name="fecha_salida"
+                                value="{{ old('fecha_salida', $estancia->fecha_salida) }}"
+                                class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
+                                required>
+
+                        @else
+
+                            <input type="date" id="fecha_salida" name="fecha_salida"
+                                value="{{ old('fecha_salida', $estancia->fecha_salida) }}"
+                                min="{{ $estancia->fecha_entrada }}"
+                                class="w-full cursor-pointer border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200"
+                                required>
+
+                        @endif
 
                         <p class="text-xs text-[#8a8e84] mt-1.5">
                             La fecha de salida no cuenta como día de estancia.

@@ -280,9 +280,19 @@ class EstanciaController extends Controller
             return redirect()->route('estancias.index')->with('error', 'No se puede modificar la estancia el día de salida.');
         }
 
-        $request->validate([
-            'fecha_salida' => 'required|date|after:' . $estancia->fecha_entrada,
-        ]);
+        if ($estancia->esSinDisponibilidad()) {
+
+            $request->validate([
+                'fecha_entrada' => 'required|date',
+                'fecha_salida' => 'required|date|after:fecha_entrada',
+            ]);
+
+        } else {
+
+            $request->validate([
+                'fecha_salida' => 'required|date|after:' . $estancia->fecha_entrada,
+            ]);
+        }
 
         $nuevaSalida = new \DateTime($request->fecha_salida);
 
@@ -296,25 +306,24 @@ class EstanciaController extends Controller
 
         $hayConflicto = false;
 
-        //hay conflicto si la estancia actual empieza antes de que termine la otra y la nueva fecha de salida supera el inicio de la otra
+        //hay conflicto si el rango de fechas de esta estancia se solapa con otra estancia pendiente, confirmada o activa de la misma mascota
+        $fechaEntradaComprobar = $estancia->esSinDisponibilidad() ? $request->fecha_entrada : $estancia->fecha_entrada;
+
         foreach ($otrasEstancias as $est) {
-            $hayConflicto = $hayConflicto || ($estancia->fecha_entrada < $est->fecha_salida && $request->fecha_salida > $est->fecha_entrada);
+            $hayConflicto = $hayConflicto || ($fechaEntradaComprobar < $est->fecha_salida && $request->fecha_salida > $est->fecha_entrada);
         }
 
         if ($hayConflicto) {
             return back()->with('error', 'Esta mascota ya tiene otra estancia entre esas fechas.');
         }
 
-        //si estaba sin disponibilidad, al cambiar fecha se vuelve a comprobar disponibilidad
+        //si estaba sin disponibilidad, al cambiar fecha se vuelve a comprobar disponibilidad (permitir cambiar entrada y salida)
         if ($estancia->esSinDisponibilidad()) {
 
+            $estancia->fecha_entrada = $request->fecha_entrada;
             $estancia->fecha_salida = $request->fecha_salida;
 
-            if (Estancia::hayDisponibilidad($estancia->fecha_entrada, $request->fecha_salida, $estancia->id)) {
-                $estancia->estado = 'confirmada';
-            } else {
-                $estancia->estado = 'sin_disponibilidad';
-            }
+            $estancia->estado = Estancia::hayDisponibilidad($estancia->fecha_entrada, $estancia->fecha_salida, $estancia->id) ? 'confirmada' : 'sin_disponibilidad';
 
             $estancia->calcularPrecioTotal();
             $estancia->save();
