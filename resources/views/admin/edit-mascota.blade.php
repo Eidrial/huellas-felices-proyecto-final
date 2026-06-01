@@ -33,8 +33,8 @@
         <!-- formulario -->
         <div class="bg-white border border-[#d9ddd0] rounded-2xl p-5 sm:p-7">
 
-            <form action="{{ route('admin.mascotas.actualizar', $mascota) }}"
-                method="POST"
+            <form action="{{ route('admin.mascotas.actualizar', $mascota) }}" 
+                method="POST" 
                 enctype="multipart/form-data"
                 class="space-y-5">
 
@@ -63,12 +63,20 @@
                         Especie
                     </label>
 
-                    <input type="text"
+                    <select
                         id="especie"
                         name="especie"
-                        value="{{ ucfirst(old('especie', $mascota->especie)) }}"
-                        required disabled
                         class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200">
+
+                        <option value="gato" disabled {{ $mascota->especie == 'gato' ? 'selected' : '' }}>
+                            Gato (no disponible)
+                        </option>
+
+                        <option value="perro" {{ $mascota->especie == 'perro' ? 'selected' : '' }}>
+                            Perro
+                        </option>
+                    </select>
+
                 </div>
 
                 <!-- raza -->
@@ -119,7 +127,7 @@
                             min="0"
                             required
                             class="w-full border border-[#d9ddd0] bg-[#fafaf8] rounded-xl px-4 py-2.5 text-sm text-[#1e2e1a] focus:outline-none focus:border-[#5a9e47] focus:bg-white transition-colors duration-200">
-                    </div>
+                        </div>
 
                 </div>
 
